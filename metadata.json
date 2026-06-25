@@ -1,0 +1,6 @@
+{
+  "name": "SPID Digital Solutions",
+  "description": "Speed. Security. Systems. Advanced Web, App, and System Architecture by SPID Digital Solutions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,179 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800;900&family=Geist:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+:root {
+  --color-primary: #E31B1C;
+  --color-secondary: #0082FF;
+  --color-background: #050505;
+  --color-surface: #0C0C0E;
+  --color-surface-container: #141416;
+  --color-surface-container-high: #1D1D21;
+  --color-surface-container-low: #080809;
+  --color-surface-container-lowest: #020203;
+  --color-on-surface: #FFFFFF;
+  --color-on-surface-variant: rgba(255, 255, 255, 0.6);
+  --color-on-primary: #FFFFFF;
+  --color-primary-container: #E31B1C;
+  --color-secondary-container: #0082FF;
+  --color-on-secondary: #FFFFFF;
+  --color-outline: rgba(255, 255, 255, 0.12);
+  --color-outline-variant: rgba(255, 255, 255, 0.06);
+}
+
+.light {
+  --color-primary: #C81012; /* High contrast red on light */
+  --color-secondary: #0055D0; /* High contrast blue on light */
+  --color-background: #FDFDFE; /* Soft paper white background */
+  --color-surface: #F4F4F7;
+  --color-surface-container: #E9EAEF;
+  --color-surface-container-high: #DDDEE5;
+  --color-surface-container-low: #F6F7FA;
+  --color-surface-container-lowest: #FFFFFF;
+  --color-on-surface: #0E0E12; /* Crisp near-black text */
+  --color-on-surface-variant: #3F4049; /* Highly readable secondary gray text (contrast >= 4.5:1) */
+  --color-on-primary: #FFFFFF;
+  --color-primary-container: #C81012;
+  --color-secondary-container: #0055D0;
+  --color-on-secondary: #FFFFFF;
+  --color-outline: rgba(14, 14, 18, 0.16);
+  --color-outline-variant: rgba(14, 14, 18, 0.08);
+}
+
+@theme {
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-surface-container: var(--color-surface-container);
+  --color-surface-container-high: var(--color-surface-container-high);
+  --color-surface-container-low: var(--color-surface-container-low);
+  --color-surface-container-lowest: var(--color-surface-container-lowest);
+  --color-on-surface: var(--color-on-surface);
+  --color-on-surface-variant: var(--color-on-surface-variant);
+  --color-on-primary: var(--color-on-primary);
+  --color-primary-container: var(--color-primary-container);
+  --color-secondary-container: var(--color-secondary-container);
+  --color-on-secondary: var(--color-on-secondary);
+  --color-outline: var(--color-outline);
+  --color-outline-variant: var(--color-outline-variant);
+
+  --font-sans: "Cairo", "Inter", "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Cairo", "Geist", "Inter", sans-serif;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-on-surface);
+  overflow-x: hidden;
+  font-family: var(--font-sans);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.glass-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(227, 27, 28, 0.3);
+  box-shadow: 0 12px 40px rgba(227, 27, 28, 0.12);
+  transform: translateY(-4px);
+}
+
+.neon-text-blue {
+  text-shadow: 0 0 15px rgba(0, 130, 255, 0.5);
+}
+
+.neon-text-red {
+  text-shadow: 0 0 15px rgba(227, 27, 28, 0.4);
+}
+
+.cyber-grid {
+  background-image: 
+    linear-gradient(rgba(227, 27, 28, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(227, 27, 28, 0.02) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.glow-pulse {
+  animation: pulse-glow 4s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(227, 27, 28, 0.08); }
+  50% { box-shadow: 0 0 35px rgba(227, 27, 28, 0.2); }
+}
+
+.ecosystem-red-blue {
+  background: radial-gradient(circle at top left, rgba(227, 27, 28, 0.06), transparent 60%),
+              radial-gradient(circle at bottom right, rgba(0, 130, 255, 0.08), transparent 60%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.display-text {
+  font-size: clamp(3rem, 8vw, 6.5rem);
+  line-height: 0.85;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.05em;
+  margin: 0;
+}
+
+.micro-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--color-on-surface-variant);
+  font-weight: 600;
+}
+
+.pill-badge {
+  border: 1px solid var(--color-outline);
+  border-radius: 100px;
+  padding: 6px 16px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-on-surface-variant);
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.pill-badge:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background-color: rgba(227, 27, 28, 0.04);
+}
+
+/* Light theme overrides for custom components */
+.light .glass-card {
+  background: linear-gradient(135deg, rgba(14, 14, 18, 0.02) 0%, rgba(14, 14, 18, 0.04) 100%);
+  border: 1px solid rgba(14, 14, 18, 0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
+}
+
+.light .glass-card:hover {
+  border-color: rgba(200, 16, 18, 0.4);
+  box-shadow: 0 12px 40px rgba(200, 16, 18, 0.1);
+}
+
+.light .cyber-grid {
+  background-image: 
+    linear-gradient(rgba(200, 16, 18, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200, 16, 18, 0.03) 1px, transparent 1px);
+}
+
+.light .ecosystem-red-blue {
+  background: radial-gradient(circle at top left, rgba(200, 16, 18, 0.04), transparent 65%),
+              radial-gradient(circle at bottom right, rgba(0, 85, 208, 0.05), transparent 65%);
+  border: 1px solid rgba(14, 14, 18, 0.08);
+}
+
+.serif-value {
+  font-family: var(--font-sans);
+  font-weight: 800;
+}
+
