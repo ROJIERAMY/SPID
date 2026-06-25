@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import ThreeScene from './ThreeScene';
+import CyberBackground from './CyberBackground';
 import { ArrowRight, Terminal, Rocket, ThumbsUp, Briefcase, Headphones } from 'lucide-react';
 
 interface HeroProps {
@@ -36,10 +37,8 @@ export default function Hero({ onGetStarted, onViewServices, lang, t }: HeroProp
 
   return (
     <section className="min-h-screen flex flex-col justify-center items-center px-6 md:px-16 pt-28 pb-12 relative overflow-hidden bg-background">
-      {/* Background radial glow */}
-      <div className="absolute inset-0 z-0 cyber-grid pointer-events-none" />
-      <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[130px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+      {/* Immersive interactive dynamic background */}
+      <CyberBackground />
 
       <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
         

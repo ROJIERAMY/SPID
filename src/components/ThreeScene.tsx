@@ -103,10 +103,10 @@ export default function ThreeScene() {
     });
 
     const glowMat = new THREE.MeshBasicMaterial({
-      color: 0xff4d4d,
+      color: 0x00ccff, // Electric neon blue wireframe overlay!
       wireframe: true,
       transparent: true,
-      opacity: 0.4,
+      opacity: 0.6, // Higher opacity for more crisp visibility
     });
 
     // Abdomen (large back sphere, elongated)
@@ -118,7 +118,7 @@ export default function ThreeScene() {
 
     const abdomenWire = new THREE.Mesh(abdomenGeom, glowMat);
     abdomenWire.position.copy(abdomen.position);
-    abdomenWire.scale.copy(abdomen.scale).multiplyScalar(1.03);
+    abdomenWire.scale.copy(abdomen.scale).multiplyScalar(1.04);
     spiderGroup.add(abdomenWire);
 
     // Cephalothorax (front head-body)
@@ -130,12 +130,12 @@ export default function ThreeScene() {
 
     const headWire = new THREE.Mesh(headGeom, glowMat);
     headWire.position.copy(head.position);
-    headWire.scale.copy(head.scale).multiplyScalar(1.03);
+    headWire.scale.copy(head.scale).multiplyScalar(1.04);
     spiderGroup.add(headWire);
 
     // Eyes (small glowing spheres)
     const eyeGeom = new THREE.SphereGeometry(0.08, 8, 8);
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff }); // Electric blue eyes!
     const leftEye = new THREE.Mesh(eyeGeom, eyeMat);
     leftEye.position.set(-0.18, 0.25, 0.9);
     spiderGroup.add(leftEye);
@@ -181,9 +181,9 @@ export default function ThreeScene() {
       femurGeom.translate(0, femurLen / 2, 0); // pivot at base
       const femur = new THREE.Mesh(femurGeom, redMat);
       
-      // Wireframe layer for femur
+      // Wireframe layer for femur (neon blue)
       const femurWire = new THREE.Mesh(femurGeom, glowMat);
-      femurWire.scale.set(1.1, 1.01, 1.1);
+      femurWire.scale.set(1.15, 1.01, 1.15);
       femur.add(femurWire);
 
       // Tibia (second major segment going downwards to floor)
@@ -192,9 +192,9 @@ export default function ThreeScene() {
       tibiaGeom.translate(0, tibiaLen / 2, 0); // pivot at base
       const tibia = new THREE.Mesh(tibiaGeom, redMat);
 
-      // Wireframe layer for tibia
+      // Wireframe layer for tibia (neon blue)
       const tibiaWire = new THREE.Mesh(tibiaGeom, glowMat);
-      tibiaWire.scale.set(1.1, 1.01, 1.1);
+      tibiaWire.scale.set(1.15, 1.01, 1.15);
       tibia.add(tibiaWire);
 
       // Position Tibia at end of Femur
@@ -202,12 +202,11 @@ export default function ThreeScene() {
       femur.add(tibia);
 
       // Base rotations to orient leg nicely
-      // Spread them forwards & backwards like a spider
-      const spreadAngle = (index - 1.5) * 0.45; // front legs forward, back legs backward
+      const spreadAngle = (index - 1.5) * 0.45;
       
-      femur.rotation.z = -side * (Math.PI / 3.5); // go up
-      femur.rotation.y = spreadAngle; // spread outwards
-      tibia.rotation.z = side * (Math.PI / 1.7); // bend back down sharply
+      femur.rotation.z = -side * (Math.PI / 3.5);
+      femur.rotation.y = spreadAngle;
+      tibia.rotation.z = side * (Math.PI / 1.7);
 
       legPivot.add(femur);
       spiderGroup.add(legPivot);
@@ -219,6 +218,29 @@ export default function ThreeScene() {
     for (let index = 0; index < 4; index++) {
       makeLeg(-1, index); // Left side
       makeLeg(1, index);  // Right side
+    }
+
+    // 3. GLOWING WEB NODES (Pulsing cyber data spheres)
+    const nodeGroup = new THREE.Group();
+    sceneGroup.add(nodeGroup);
+
+    const nodeGeom = new THREE.SphereGeometry(0.06, 8, 8);
+    const nodeMat = new THREE.MeshBasicMaterial({
+      color: 0x00d2ff, // Pulsing bright cyan-blue nodes!
+      transparent: true,
+      opacity: 0.8
+    });
+
+    const webNodes: THREE.Mesh[] = [];
+    const nodeCount = 15;
+    for (let n = 0; n < nodeCount; n++) {
+      const node = new THREE.Mesh(nodeGeom, nodeMat);
+      // Position nodes randomly along key intersections on the web
+      const randomRadius = (Math.floor(Math.random() * 5) + 2) * 0.6;
+      const randomAngle = (n / nodeCount) * Math.PI * 2 + (Math.random() * 0.4);
+      node.position.set(Math.cos(randomAngle) * randomRadius, Math.sin(randomAngle) * randomRadius, -1);
+      nodeGroup.add(node);
+      webNodes.push(node);
     }
 
     // Interactive mouse movement variables
@@ -278,6 +300,15 @@ export default function ThreeScene() {
         ring.scale.set(ringScale, ringScale, 1);
       });
 
+      // Pulse the web nodes dynamically in size & opacity!
+      webNodes.forEach((node, idx) => {
+        const nodePulse = 1.0 + Math.sin(time * 3.0 + idx) * 0.35;
+        node.scale.set(nodePulse, nodePulse, nodePulse);
+        if (node.material instanceof THREE.MeshBasicMaterial) {
+          node.material.opacity = 0.5 + Math.sin(time * 3.0 + idx) * 0.3;
+        }
+      });
+
       renderer.render(scene, camera);
     };
 
@@ -309,9 +340,11 @@ export default function ThreeScene() {
       headGeom.dispose();
       eyeGeom.dispose();
       palpGeom.dispose();
+      nodeGeom.dispose();
       redMat.dispose();
       glowMat.dispose();
       eyeMat.dispose();
+      nodeMat.dispose();
       ringMat.dispose();
       blueRingMat.dispose();
     };

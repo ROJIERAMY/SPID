@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import CyberBackground from './CyberBackground';
 import { 
   ArrowLeft, 
   Check, 
@@ -125,11 +126,8 @@ export default function ServicePage({ serviceId, onBack, lang, t, onInquirePacka
 
   return (
     <div className="relative min-h-screen bg-background text-on-surface pt-24 pb-20 overflow-hidden" id="service-root">
-      {/* Background visual graphics */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0">
-        <div className={`absolute top-20 left-10 w-96 h-96 rounded-full blur-[150px] opacity-10 ${isRed ? 'bg-secondary' : 'bg-primary'}`} />
-        <div className={`absolute bottom-20 right-10 w-96 h-96 rounded-full blur-[150px] opacity-10 ${isRed ? 'bg-primary' : 'bg-secondary'}`} />
-      </div>
+      {/* Dynamic catchy high tech background */}
+      <CyberBackground />
 
       <div className="max-w-7xl mx-auto px-6 md:px-16 relative z-10">
         {/* Navigation back and header */}
