@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import CyberBackground from './CyberBackground';
 import { Quote } from 'lucide-react';
 import { testimonials } from '../data';
 
@@ -27,8 +28,9 @@ export default function Testimonials({ lang, t }: TestimonialsProps) {
   };
 
   return (
-    <section className="py-24 px-6 md:px-16 max-w-7xl mx-auto">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <section className="py-24 px-6 md:px-16 max-w-7xl mx-auto relative overflow-hidden">
+      <CyberBackground />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10">
         {testimonials.map((testimonial, index) => {
           const isRed = testimonial.colorType === 'red';
           const quoteText = testimonialQuotes[testimonial.id] || testimonial.quote;

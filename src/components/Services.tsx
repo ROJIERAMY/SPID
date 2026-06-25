@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'motion/react';
+import CyberBackground from './CyberBackground';
 import { services } from '../data';
 import * as LucideIcons from 'lucide-react';
 import { Service } from '../types';
@@ -77,6 +78,8 @@ function TiltCard({ service, title, description, onServiceSelect }: TiltCardProp
     setRotate({ x: 0, y: 0 });
   };
 
+  const floatDuration = 4 + (service.id.charCodeAt(0) % 4) * 0.7;
+
   return (
     <motion.div
       ref={cardRef}
@@ -111,33 +114,45 @@ function TiltCard({ service, title, description, onServiceSelect }: TiltCardProp
       {/* Grid pattern inside each card for high tech detail */}
       <div className="absolute inset-0 opacity-[0.03] bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
-      {/* Icon Container with glowing effects, adding much more vibrant blue tones */}
-      <div 
-        style={{ transform: 'translateZ(30px)' }}
-        className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 border group-hover:scale-110 transition-transform duration-300 relative z-10
-          ${service.isSecurity 
-            ? 'bg-secondary/15 border-secondary/50 text-secondary shadow-[0_0_20px_rgba(0,130,255,0.45)]' 
-            : 'bg-primary/5 border-secondary/35 text-secondary shadow-[0_0_15px_rgba(0,130,255,0.2)] group-hover:border-secondary group-hover:shadow-[0_0_25px_rgba(0,130,255,0.5)]'}`}
+      {/* Persistent subtle 3D float animation wrapping content */}
+      <motion.div
+        animate={{ y: [0, -6, 0] }}
+        transition={{
+          repeat: Infinity,
+          duration: floatDuration,
+          ease: 'easeInOut',
+        }}
+        className="w-full flex flex-col items-center"
+        style={{ transformStyle: 'preserve-3d' }}
       >
-        <IconComponent className="w-7 h-7 stroke-[2]" />
-      </div>
+        {/* Icon Container with glowing effects, adding much more vibrant blue tones */}
+        <div 
+          style={{ transform: 'translateZ(30px)' }}
+          className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 border group-hover:scale-110 transition-transform duration-300 relative z-10
+            ${service.isSecurity 
+              ? 'bg-secondary/15 border-secondary/50 text-secondary shadow-[0_0_20px_rgba(0,130,255,0.45)]' 
+              : 'bg-primary/5 border-secondary/35 text-secondary shadow-[0_0_15px_rgba(0,130,255,0.2)] group-hover:border-secondary group-hover:shadow-[0_0_25px_rgba(0,130,255,0.5)]'}`}
+        >
+          <IconComponent className="w-7 h-7 stroke-[2]" />
+        </div>
 
-      {/* Title with Z-index perspective */}
-      <h3 
-        style={{ transform: 'translateZ(20px)' }}
-        className={`font-display text-lg font-bold mb-2 group-hover:text-secondary transition-colors relative z-10
-          ${service.isSecurity ? 'text-secondary' : 'text-primary'}`}
-      >
-        {title}
-      </h3>
+        {/* Title with Z-index perspective */}
+        <h3 
+          style={{ transform: 'translateZ(20px)' }}
+          className={`font-display text-lg font-bold mb-2 group-hover:text-secondary transition-colors relative z-10
+            ${service.isSecurity ? 'text-secondary' : 'text-primary'}`}
+        >
+          {title}
+        </h3>
 
-      {/* Description */}
-      <p 
-        style={{ transform: 'translateZ(10px)' }}
-        className="text-on-surface-variant text-xs md:text-sm leading-relaxed font-sans relative z-10"
-      >
-        {description}
-      </p>
+        {/* Description */}
+        <p 
+          style={{ transform: 'translateZ(10px)' }}
+          className="text-on-surface-variant text-xs md:text-sm leading-relaxed font-sans relative z-10"
+        >
+          {description}
+        </p>
+      </motion.div>
     </motion.div>
   );
 }
@@ -160,9 +175,10 @@ export default function Services({ onServiceSelect, lang, t }: ServicesProps) {
   };
 
   return (
-    <section id="services" className="py-24 px-6 md:px-16 max-w-7xl mx-auto relative">
+    <section id="services" className="py-24 px-6 md:px-16 max-w-7xl mx-auto relative overflow-hidden">
+      <CyberBackground />
       {/* Decorative lines & elements */}
-      <div className="absolute left-1/2 top-0 w-px h-16 bg-gradient-to-b from-secondary/40 to-transparent" />
+      <div className="absolute left-1/2 top-0 w-px h-16 bg-gradient-to-b from-secondary/40 to-transparent z-10" />
       
       <div className="text-center mb-16 space-y-3">
         <motion.h2 

@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import CyberBackground from './CyberBackground';
 import { Shield, Zap, Sparkles, Headphones, ArrowRight } from 'lucide-react';
 
 interface EcosystemProps {
@@ -41,8 +42,9 @@ export default function Ecosystem({ onEcosystemSelect, lang, t }: EcosystemProps
   ];
 
   return (
-    <section id="about" className="py-24 px-6 md:px-16 max-w-7xl mx-auto bg-background">
-      <div className="ecosystem-red-blue p-8 md:p-16 rounded-[3rem] relative overflow-hidden border border-white/10 shadow-2xl">
+    <section id="about" className="py-24 px-6 md:px-16 max-w-7xl mx-auto relative overflow-hidden bg-background">
+      <CyberBackground />
+      <div className="ecosystem-red-blue p-8 md:p-16 rounded-[3rem] relative overflow-hidden border border-white/10 shadow-2xl z-10">
         {/* Background glow overlay */}
         <div className="absolute top-0 left-0 w-80 h-80 bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute bottom-0 right-0 w-80 h-80 bg-secondary/10 rounded-full blur-[120px] pointer-events-none" />

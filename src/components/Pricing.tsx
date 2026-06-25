@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import CyberBackground from './CyberBackground';
 import { pricingTiers } from '../data';
 import { Check, ShieldCheck, Zap, Lock } from 'lucide-react';
 import { PricingTier } from '../types';
@@ -41,8 +42,9 @@ export default function Pricing({ onTierSelect, lang, t }: PricingProps) {
   };
 
   return (
-    <section id="pricing" className="py-24 px-6 md:px-16 max-w-7xl mx-auto bg-background">
-      <div className="text-center mb-16 space-y-3">
+    <section id="pricing" className="py-24 px-6 md:px-16 max-w-7xl mx-auto relative overflow-hidden bg-background">
+      <CyberBackground />
+      <div className="text-center mb-16 space-y-3 relative z-10">
         <motion.h2 
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -61,7 +63,7 @@ export default function Pricing({ onTierSelect, lang, t }: PricingProps) {
         </motion.p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch relative z-10">
         {pricingTiers.map((tier, index) => {
           const isRed = tier.colorType === 'red';
           const tierName = tierNames[tier.id] || tier.name;

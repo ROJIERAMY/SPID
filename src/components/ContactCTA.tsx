@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import CyberBackground from './CyberBackground';
 
 interface ContactCTAProps {
   onBookConsultation: () => void;
@@ -9,6 +10,7 @@ interface ContactCTAProps {
 export default function ContactCTA({ onBookConsultation, lang, t }: ContactCTAProps) {
   return (
     <section className="py-24 px-6 md:px-16 text-center relative overflow-hidden">
+      <CyberBackground />
       {/* Background glow effects */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[350px] h-[350px] bg-primary/10 rounded-full blur-[110px] pointer-events-none" />
 

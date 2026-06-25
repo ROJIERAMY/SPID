@@ -1,4 +1,5 @@
 import { motion } from 'motion/react';
+import CyberBackground from './CyberBackground';
 import { caseStudies } from '../data';
 
 interface ShowcaseProps {
@@ -26,10 +27,11 @@ export default function Showcase({ lang, t }: ShowcaseProps) {
   };
 
   return (
-    <section id="showcase" className="py-24 px-6 md:px-16 max-w-7xl mx-auto overflow-hidden">
+    <section id="showcase" className="py-24 px-6 md:px-16 max-w-7xl mx-auto relative overflow-hidden">
+      <CyberBackground />
       
       {/* Section Header */}
-      <div className="text-center mb-16 space-y-3">
+      <div className="text-center mb-16 space-y-3 relative z-10">
         <motion.h2 
           initial={{ opacity: 0, y: 15 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -49,7 +51,7 @@ export default function Showcase({ lang, t }: ShowcaseProps) {
       </div>
 
       {/* Grid of Case Study Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 relative z-10">
         {caseStudies.map((study, index) => {
           const title = caseTitles[study.id] || study.title;
           const subtitle = caseSubtitles[study.id] || study.subtitle;
