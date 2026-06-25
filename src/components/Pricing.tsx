@@ -68,6 +68,7 @@ export default function Pricing({ onTierSelect, lang, t }: PricingProps) {
           const isRed = tier.colorType === 'red';
           const tierName = tierNames[tier.id] || tier.name;
           const buttonText = tier.id === 'enterprise' ? t.btnContactUs : t.btnGetStarted;
+          const floatDuration = 5.2 + (tier.id.charCodeAt(0) % 3) * 0.7;
 
           return (
             <motion.div
@@ -76,82 +77,92 @@ export default function Pricing({ onTierSelect, lang, t }: PricingProps) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-50px' }}
               transition={{ duration: 0.6, delay: index * 0.15 }}
-              className={`glass-card p-10 rounded-[2rem] flex flex-col justify-between relative overflow-hidden h-full group
-                ${tier.isPopular 
-                  ? 'border-primary shadow-[0_0_40px_rgba(227,27,28,0.12)] bg-gradient-to-b from-primary/[0.03] to-transparent scale-[1.02] z-10' 
-                  : isRed 
-                    ? 'border-primary/20 hover:border-primary/40' 
-                    : 'border-secondary/20 hover:border-secondary/40'}`}
+              className="h-full"
             >
-              {/* Most Secure Badge */}
-              {tier.badge && (
-                <div className="absolute top-6 right-6 bg-primary text-on-primary px-3.5 py-1 rounded-full text-[9px] font-black tracking-widest uppercase shadow-[0_0_10px_rgba(227,27,28,0.4)]">
-                  {t.popularBadge}
-                </div>
-              )}
-
-              <div>
-                {/* Header */}
-                <div className={`micro-label mb-4 tracking-[0.2em] font-semibold text-xs uppercase
-                  ${isRed ? 'text-primary neon-text-red' : 'text-secondary neon-text-blue'}`}
-                >
-                  {tierName}
-                </div>
-
-                {/* Price */}
-                <div className="flex items-baseline gap-2 mb-8">
-                  <span className="serif-value text-4xl md:text-5xl text-on-surface tracking-tight font-light italic">
-                    {tier.price}
-                  </span>
-                  <span className="text-on-surface-variant text-xs md:text-sm font-medium">
-                    {t.currency}
-                  </span>
-                </div>
-
-                {/* Features List */}
-                <ul className="space-y-4 mb-10 text-sm">
-                  {tier.features.map((feature, i) => {
-                    const translatedFeature = featureTranslations[feature] || feature;
-                    return (
-                      <li key={i} className="flex items-center gap-3 text-on-surface font-medium">
-                        {isRed ? (
-                          <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
-                        ) : (
-                          <Check className="w-4 h-4 text-secondary shrink-0" />
-                        )}
-                        <span>{translatedFeature}</span>
-                      </li>
-                    );
-                  })}
-
-                  {/* Disabled Features */}
-                  {tier.disabledFeatures?.map((feature, i) => {
-                    const translatedFeature = featureTranslations[feature] || feature;
-                    return (
-                      <li key={i} className="flex items-center gap-3 text-on-surface-variant/40 line-through">
-                        <Lock className="w-3.5 h-3.5 text-outline-variant shrink-0" />
-                        <span>{translatedFeature}</span>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-
-              {/* Action Button */}
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => onTierSelect(tier)}
-                className={`w-full py-4 rounded-xl font-bold transition-all text-sm cursor-pointer flex items-center justify-center gap-2
+              <motion.div
+                animate={{ y: [0, -6, 0] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: floatDuration,
+                  ease: 'easeInOut',
+                }}
+                className={`glass-card p-10 rounded-[2rem] flex flex-col justify-between relative overflow-hidden h-full group transition-all duration-300
                   ${tier.isPopular 
-                    ? 'bg-primary text-on-primary hover:shadow-[0_0_20px_rgba(227,27,28,0.4)]' 
+                    ? 'border-primary shadow-[0_0_40px_rgba(227,27,28,0.18)] bg-gradient-to-b from-primary/[0.04] to-transparent scale-[1.02] z-10' 
                     : isRed 
-                      ? 'border border-primary text-primary hover:bg-primary/10' 
-                      : 'border border-secondary text-secondary hover:bg-secondary/10'}`}
+                      ? 'border-primary/20 hover:border-primary/50 hover:shadow-[0_15px_30px_rgba(227,27,28,0.12)] bg-surface/30' 
+                      : 'border-secondary/20 hover:border-secondary/50 hover:shadow-[0_15px_30px_rgba(0,130,255,0.12)] bg-surface/30'}`}
               >
-                {tier.isPopular && <Zap className="w-4 h-4 fill-current" />}
-                {buttonText}
-              </motion.button>
+                {/* Most Secure Badge */}
+                {tier.badge && (
+                  <div className="absolute top-6 right-6 bg-primary text-on-primary px-3.5 py-1 rounded-full text-[9px] font-black tracking-widest uppercase shadow-[0_0_10px_rgba(227,27,28,0.4)]">
+                    {t.popularBadge}
+                  </div>
+                )}
+
+                <div>
+                  {/* Header */}
+                  <div className={`micro-label mb-4 tracking-[0.2em] font-semibold text-xs uppercase
+                    ${isRed ? 'text-primary neon-text-red' : 'text-secondary neon-text-blue'}`}
+                  >
+                    {tierName}
+                  </div>
+
+                  {/* Price */}
+                  <div className="flex items-baseline gap-2 mb-8">
+                    <span className="serif-value text-4xl md:text-5xl text-on-surface tracking-tight font-light italic">
+                      {tier.price}
+                    </span>
+                    <span className="text-on-surface-variant text-xs md:text-sm font-medium">
+                      {t.currency}
+                    </span>
+                  </div>
+
+                  {/* Features List */}
+                  <ul className="space-y-4 mb-10 text-sm">
+                    {tier.features.map((feature, i) => {
+                      const translatedFeature = featureTranslations[feature] || feature;
+                      return (
+                        <li key={i} className="flex items-center gap-3 text-on-surface font-medium">
+                          {isRed ? (
+                            <ShieldCheck className="w-4 h-4 text-primary shrink-0" />
+                          ) : (
+                            <Check className="w-4 h-4 text-secondary shrink-0" />
+                          )}
+                          <span>{translatedFeature}</span>
+                        </li>
+                      );
+                    })}
+
+                    {/* Disabled Features */}
+                    {tier.disabledFeatures?.map((feature, i) => {
+                      const translatedFeature = featureTranslations[feature] || feature;
+                      return (
+                        <li key={i} className="flex items-center gap-3 text-on-surface-variant/40 line-through">
+                          <Lock className="w-3.5 h-3.5 text-outline-variant shrink-0" />
+                          <span>{translatedFeature}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+
+                {/* Action Button */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => onTierSelect(tier)}
+                  className={`w-full py-4 rounded-xl font-bold transition-all text-sm cursor-pointer flex items-center justify-center gap-2
+                    ${tier.isPopular 
+                      ? 'bg-primary text-on-primary hover:shadow-[0_0_20px_rgba(227,27,28,0.4)]' 
+                      : isRed 
+                        ? 'border border-primary text-primary hover:bg-primary/10' 
+                        : 'border border-secondary text-secondary hover:bg-secondary/10'}`}
+                >
+                  {tier.isPopular && <Zap className="w-4 h-4 fill-current" />}
+                  {buttonText}
+                </motion.button>
+              </motion.div>
             </motion.div>
           );
         })}

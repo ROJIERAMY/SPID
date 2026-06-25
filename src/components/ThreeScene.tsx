@@ -95,147 +95,227 @@ export default function ThreeScene() {
     spiderGroup.rotation.x = Math.PI * 0.15; 
     sceneGroup.add(spiderGroup);
 
-    const redMat = new THREE.MeshPhongMaterial({
-      color: 0xe31b1c,
-      emissive: 0x1c0000,
-      shininess: 120,
+    // Premium Biomechanical Materials
+    const titaniumMat = new THREE.MeshStandardMaterial({
+      color: 0x141416,
+      emissive: 0x050508,
+      metalness: 0.95,
+      roughness: 0.18,
       flatShading: true,
     });
 
-    const glowMat = new THREE.MeshBasicMaterial({
-      color: 0x00ccff, // Electric neon blue wireframe overlay!
-      wireframe: true,
-      transparent: true,
-      opacity: 0.6, // Higher opacity for more crisp visibility
+    const crimsonGlowMat = new THREE.MeshStandardMaterial({
+      color: 0xff1e22,
+      emissive: 0xff0005,
+      roughness: 0.1,
+      metalness: 0.8,
+      flatShading: true,
     });
+
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff }); // Electric blue eyes!
 
     // We will collect all dynamically created geometries to dispose them properly at cleanup
     const geometriesToDispose: THREE.BufferGeometry[] = [];
 
-    // Abdomen (organic, pear-shaped and more biological)
-    const abdomenGeom = new THREE.IcosahedronGeometry(1.0, 2); // Smoother, higher poly
+    // Base Abdomen (Pear-shaped, biological base)
+    const abdomenGeom = new THREE.IcosahedronGeometry(1.0, 2);
     geometriesToDispose.push(abdomenGeom);
-    const abdomen = new THREE.Mesh(abdomenGeom, redMat);
+    const abdomen = new THREE.Mesh(abdomenGeom, titaniumMat);
     abdomen.position.set(0, -0.35, -0.75);
     abdomen.scale.set(0.85, 0.65, 1.4);
     spiderGroup.add(abdomen);
 
-    const abdomenWire = new THREE.Mesh(abdomenGeom, glowMat);
-    abdomenWire.position.copy(abdomen.position);
-    abdomenWire.scale.copy(abdomen.scale).multiplyScalar(1.04);
-    spiderGroup.add(abdomenWire);
+    // Realistic Segmented Carapace / Armored Plates on Abdomen
+    const plateCount = 5;
+    for (let p = 0; p < plateCount; p++) {
+      const plateGeom = new THREE.ConeGeometry(0.85, 0.5, 5);
+      plateGeom.rotateX(Math.PI / 2.2);
+      geometriesToDispose.push(plateGeom);
 
-    // Cephalothorax (gorgeous segment with front narrowing)
-    const headGeom = new THREE.IcosahedronGeometry(0.65, 2); // Smoother, higher poly
+      const plate = new THREE.Mesh(plateGeom, p % 2 === 0 ? crimsonGlowMat : titaniumMat);
+      
+      // Lay them out overlapping down the back of the abdomen
+      const zRatio = p / (plateCount - 1); // 0 to 1
+      const plateZ = -0.15 - (zRatio * 1.0);
+      const plateY = -0.05 - (zRatio * 0.28);
+      const scaleVal = 0.95 - (zRatio * 0.35);
+
+      plate.position.set(0, plateY, plateZ);
+      plate.scale.set(scaleVal, scaleVal * 0.6, scaleVal * 0.6);
+      
+      // Parent plates to the abdomen so they breathe with it!
+      abdomen.add(plate);
+    }
+
+    // Spinnerets at the rear end of the abdomen
+    const spinneretGeom = new THREE.CylinderGeometry(0.04, 0.02, 0.2, 5);
+    spinneretGeom.translate(0, -0.1, 0);
+    geometriesToDispose.push(spinneretGeom);
+
+    const leftSpinneret = new THREE.Mesh(spinneretGeom, titaniumMat);
+    leftSpinneret.position.set(-0.1, -0.4, -2.1);
+    leftSpinneret.rotation.set(-0.4, 0, -0.2);
+    spiderGroup.add(leftSpinneret);
+
+    const rightSpinneret = new THREE.Mesh(spinneretGeom, titaniumMat);
+    rightSpinneret.position.set(0.1, -0.4, -2.1);
+    rightSpinneret.rotation.set(-0.4, 0, 0.2);
+    spiderGroup.add(rightSpinneret);
+
+    // Cephalothorax (The armored head-body segment)
+    const headGeom = new THREE.IcosahedronGeometry(0.65, 2);
     geometriesToDispose.push(headGeom);
-    const head = new THREE.Mesh(headGeom, redMat);
+    const head = new THREE.Mesh(headGeom, titaniumMat);
     head.position.set(0, 0.05, 0.45);
-    head.scale.set(0.8, 0.6, 0.9);
+    head.scale.set(0.82, 0.62, 0.95);
     spiderGroup.add(head);
 
-    const headWire = new THREE.Mesh(headGeom, glowMat);
-    headWire.position.copy(head.position);
-    headWire.scale.copy(head.scale).multiplyScalar(1.04);
-    spiderGroup.add(headWire);
+    // Glowing center plate on head
+    const headPlateGeom = new THREE.BoxGeometry(0.18, 0.08, 0.6);
+    geometriesToDispose.push(headPlateGeom);
+    const headPlate = new THREE.Mesh(headPlateGeom, crimsonGlowMat);
+    headPlate.position.set(0, 0.33, 0.42);
+    headPlate.rotation.x = -0.25;
+    spiderGroup.add(headPlate);
 
-    // Realistic Chelicerae / Fangs (The mouthpart claws)
-    const fangGeom = new THREE.CylinderGeometry(0.06, 0.012, 0.38, 6);
-    fangGeom.translate(0, -0.19, 0); // pivot at root
+    // Realistic Double-Segmented Chelicerae & Fangs
+    const cheliceraGeom = new THREE.CylinderGeometry(0.09, 0.06, 0.32, 6);
+    cheliceraGeom.translate(0, -0.16, 0);
+    geometriesToDispose.push(cheliceraGeom);
+
+    const fangGeom = new THREE.CylinderGeometry(0.04, 0.01, 0.25, 5);
+    fangGeom.translate(0, -0.125, 0);
     geometriesToDispose.push(fangGeom);
 
-    const leftFang = new THREE.Mesh(fangGeom, redMat);
-    leftFang.position.set(-0.11, -0.14, 0.84);
-    leftFang.rotation.set(0.35, 0.15, -0.1);
-    spiderGroup.add(leftFang);
+    // Left Fang Assembly
+    const leftChelicera = new THREE.Mesh(cheliceraGeom, titaniumMat);
+    leftChelicera.position.set(-0.13, -0.12, 0.82);
+    leftChelicera.rotation.set(0.3, 0.1, -0.05);
+    spiderGroup.add(leftChelicera);
 
-    const leftFangWire = new THREE.Mesh(fangGeom, glowMat);
-    leftFangWire.scale.set(1.15, 1.01, 1.15);
-    leftFang.add(leftFangWire);
+    const leftFang = new THREE.Mesh(fangGeom, crimsonGlowMat);
+    leftFang.position.set(0, -0.3, 0.02);
+    leftFang.rotation.set(0.4, 0.2, -0.35); // Curving inward and backward
+    leftChelicera.add(leftFang);
 
-    const rightFang = new THREE.Mesh(fangGeom, redMat);
-    rightFang.position.set(0.11, -0.14, 0.84);
-    rightFang.rotation.set(0.35, -0.15, 0.1);
-    spiderGroup.add(rightFang);
+    // Right Fang Assembly
+    const rightChelicera = new THREE.Mesh(cheliceraGeom, titaniumMat);
+    rightChelicera.position.set(0.13, -0.12, 0.82);
+    rightChelicera.rotation.set(0.3, -0.1, 0.05);
+    spiderGroup.add(rightChelicera);
 
-    const rightFangWire = new THREE.Mesh(fangGeom, glowMat);
-    rightFangWire.scale.set(1.15, 1.01, 1.15);
-    rightFang.add(rightFangWire);
+    const rightFang = new THREE.Mesh(fangGeom, crimsonGlowMat);
+    rightFang.position.set(0, -0.3, 0.02);
+    rightFang.rotation.set(0.4, -0.2, 0.35); // Curving inward and backward
+    rightChelicera.add(rightFang);
 
-    // Eyes (8 glowing cyber eyes!)
-    const eyeGeom = new THREE.SphereGeometry(0.07, 8, 8);
-    geometriesToDispose.push(eyeGeom);
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff }); // Electric blue eyes!
+    // 8 Realistic glowing cyber eyes arranged like a Wolf Spider!
+    // Anterior Median Eyes (AME - Very Large, centered)
+    // Anterior Lateral Eyes (ALE - Medium-large, next to AME)
+    // Posterior Median Eyes (PME - Large, top-front)
+    // Posterior Lateral Eyes (PLE - Medium, top-side)
+    const bigEyeGeom = new THREE.SphereGeometry(0.075, 8, 8);
+    const midEyeGeom = new THREE.SphereGeometry(0.05, 8, 8);
+    const smallEyeGeom = new THREE.SphereGeometry(0.035, 8, 8);
+    geometriesToDispose.push(bigEyeGeom, midEyeGeom, smallEyeGeom);
 
-    // Main central eyes
-    const leftEye = new THREE.Mesh(eyeGeom, eyeMat);
-    leftEye.position.set(-0.16, 0.22, 0.88);
-    spiderGroup.add(leftEye);
+    // 1 & 2: Main central eyes (AME)
+    const leftAME = new THREE.Mesh(bigEyeGeom, eyeMat);
+    leftAME.position.set(-0.15, 0.22, 0.88);
+    spiderGroup.add(leftAME);
 
-    const rightEye = new THREE.Mesh(eyeGeom, eyeMat);
-    rightEye.position.set(0.16, 0.22, 0.88);
-    spiderGroup.add(rightEye);
+    const rightAME = new THREE.Mesh(bigEyeGeom, eyeMat);
+    rightAME.position.set(0.15, 0.22, 0.88);
+    spiderGroup.add(rightAME);
 
-    // Secondary smaller side eyes for high realism!
-    const leftSideEye = new THREE.Mesh(eyeGeom, eyeMat);
-    leftSideEye.scale.set(0.65, 0.65, 0.65);
-    leftSideEye.position.set(-0.3, 0.18, 0.78);
-    spiderGroup.add(leftSideEye);
+    // 3 & 4: Anterior Lateral Eyes (ALE)
+    const leftALE = new THREE.Mesh(midEyeGeom, eyeMat);
+    leftALE.position.set(-0.3, 0.18, 0.82);
+    spiderGroup.add(leftALE);
 
-    const rightSideEye = new THREE.Mesh(eyeGeom, eyeMat);
-    rightSideEye.scale.set(0.65, 0.65, 0.65);
-    rightSideEye.position.set(0.3, 0.18, 0.78);
-    spiderGroup.add(rightSideEye);
+    const rightALE = new THREE.Mesh(midEyeGeom, eyeMat);
+    rightALE.position.set(0.3, 0.18, 0.82);
+    spiderGroup.add(rightALE);
 
-    // Pedipalps (Sensory feeler arms with realistic joint bending)
-    const palpBaseGeom = new THREE.CylinderGeometry(0.025, 0.015, 0.25, 5);
-    palpBaseGeom.translate(0, 0.125, 0);
+    // 5 & 6: Posterior Median Eyes (PME - facing slightly upwards)
+    const leftPME = new THREE.Mesh(bigEyeGeom, eyeMat);
+    leftPME.scale.set(0.85, 0.85, 0.85);
+    leftPME.position.set(-0.16, 0.35, 0.68);
+    spiderGroup.add(leftPME);
+
+    const rightPME = new THREE.Mesh(bigEyeGeom, eyeMat);
+    rightPME.scale.set(0.85, 0.85, 0.85);
+    rightPME.position.set(0.16, 0.35, 0.68);
+    spiderGroup.add(rightPME);
+
+    // 7 & 8: Posterior Lateral Eyes (PLE - looking sideways)
+    const leftPLE = new THREE.Mesh(midEyeGeom, eyeMat);
+    leftPLE.position.set(-0.33, 0.28, 0.58);
+    spiderGroup.add(leftPLE);
+
+    const rightPLE = new THREE.Mesh(midEyeGeom, eyeMat);
+    rightPLE.position.set(0.33, 0.28, 0.58);
+    spiderGroup.add(rightPLE);
+
+    // Pedipalps (Realistic 3-segment sensory feeler arms)
+    const palpBaseGeom = new THREE.CylinderGeometry(0.028, 0.02, 0.22, 6);
+    palpBaseGeom.translate(0, 0.11, 0);
     geometriesToDispose.push(palpBaseGeom);
     
-    const palpTipGeom = new THREE.CylinderGeometry(0.015, 0.008, 0.22, 5);
-    palpTipGeom.translate(0, 0.11, 0);
+    const palpMidGeom = new THREE.CylinderGeometry(0.02, 0.015, 0.2, 5);
+    palpMidGeom.translate(0, 0.1, 0);
+    geometriesToDispose.push(palpMidGeom);
+
+    const palpTipGeom = new THREE.CylinderGeometry(0.015, 0.008, 0.18, 5);
+    palpTipGeom.translate(0, 0.09, 0);
     geometriesToDispose.push(palpTipGeom);
 
-    // Left Palp
-    const leftPalp = new THREE.Mesh(palpBaseGeom, redMat);
-    leftPalp.position.set(-0.2, -0.05, 0.8);
-    leftPalp.rotation.set(0.2, 0.15, -0.15);
+    const jointSphereGeom = new THREE.SphereGeometry(0.032, 6, 6);
+    geometriesToDispose.push(jointSphereGeom);
+
+    // Left Palp Assembly
+    const leftPalp = new THREE.Mesh(palpBaseGeom, titaniumMat);
+    leftPalp.position.set(-0.24, -0.05, 0.78);
+    leftPalp.rotation.set(0.2, 0.15, -0.12);
     
-    const leftPalpWire = new THREE.Mesh(palpBaseGeom, glowMat);
-    leftPalpWire.scale.set(1.15, 1.01, 1.15);
-    leftPalp.add(leftPalpWire);
+    const leftPalpMid = new THREE.Mesh(palpMidGeom, titaniumMat);
+    leftPalpMid.position.set(0, 0.22, 0);
+    leftPalpMid.rotation.x = 0.45; // bent forward
+    leftPalp.add(leftPalpMid);
 
-    const leftPalpTip = new THREE.Mesh(palpTipGeom, redMat);
-    leftPalpTip.position.set(0, 0.25, 0);
-    leftPalpTip.rotation.x = 0.5; // bent forward
-    leftPalp.add(leftPalpTip);
+    const leftPalpJoint = new THREE.Mesh(jointSphereGeom, crimsonGlowMat);
+    leftPalpJoint.position.set(0, 0, 0);
+    leftPalpMid.add(leftPalpJoint);
 
-    const leftPalpTipWire = new THREE.Mesh(palpTipGeom, glowMat);
-    leftPalpTipWire.scale.set(1.15, 1.01, 1.15);
-    leftPalpTip.add(leftPalpTipWire);
+    const leftPalpTip = new THREE.Mesh(palpTipGeom, titaniumMat);
+    leftPalpTip.position.set(0, 0.2, 0);
+    leftPalpTip.rotation.x = 0.4;
+    leftPalpMid.add(leftPalpTip);
 
     spiderGroup.add(leftPalp);
 
-    // Right Palp
-    const rightPalp = new THREE.Mesh(palpBaseGeom, redMat);
-    rightPalp.position.set(0.2, -0.05, 0.8);
-    rightPalp.rotation.set(0.2, -0.15, 0.15);
+    // Right Palp Assembly
+    const rightPalp = new THREE.Mesh(palpBaseGeom, titaniumMat);
+    rightPalp.position.set(0.24, -0.05, 0.78);
+    rightPalp.rotation.set(0.2, -0.15, 0.12);
 
-    const rightPalpWire = new THREE.Mesh(palpBaseGeom, glowMat);
-    rightPalpWire.scale.set(1.15, 1.01, 1.15);
-    rightPalp.add(rightPalpWire);
+    const rightPalpMid = new THREE.Mesh(palpMidGeom, titaniumMat);
+    rightPalpMid.position.set(0, 0.22, 0);
+    rightPalpMid.rotation.x = 0.45; // bent forward
+    rightPalp.add(rightPalpMid);
 
-    const rightPalpTip = new THREE.Mesh(palpTipGeom, redMat);
-    rightPalpTip.position.set(0, 0.25, 0);
-    rightPalpTip.rotation.x = 0.5; // bent forward
-    rightPalp.add(rightPalpTip);
+    const rightPalpJoint = new THREE.Mesh(jointSphereGeom, crimsonGlowMat);
+    rightPalpJoint.position.set(0, 0, 0);
+    rightPalpMid.add(rightPalpJoint);
 
-    const rightPalpTipWire = new THREE.Mesh(palpTipGeom, glowMat);
-    rightPalpTipWire.scale.set(1.15, 1.01, 1.15);
-    rightPalpTip.add(rightPalpTipWire);
+    const rightPalpTip = new THREE.Mesh(palpTipGeom, titaniumMat);
+    rightPalpTip.position.set(0, 0.2, 0);
+    rightPalpTip.rotation.x = 0.4;
+    rightPalpMid.add(rightPalpTip);
 
     spiderGroup.add(rightPalp);
 
-    // 8 Legs (4 pairs) - Upgraded to 3-segment realistic joints (Femur -> Tibia -> Tarsus)
+    // 8 Legs (4 pairs) - Upgraded to beautiful 3-segment joints with glowing connection hinge spheres!
     interface LegGroup {
       femur: THREE.Mesh;
       tibia: THREE.Mesh;
@@ -250,60 +330,70 @@ export default function ThreeScene() {
       // Create a local system for each leg pivot point
       const legPivot = new THREE.Group();
       
-      // Distribute origin positions along the cephalothorax
-      const zOffset = 0.45 - index * 0.24;
+      // Distribute origin positions exactly along the sides of the cephalothorax
+      const zOffset = 0.42 - index * 0.22;
       legPivot.position.set(side * 0.32, 0.05, zOffset);
 
+      // Coxa (Leg anchor base)
+      const coxaGeom = new THREE.CylinderGeometry(0.06, 0.05, 0.15, 6);
+      coxaGeom.rotateZ(Math.PI / 2);
+      geometriesToDispose.push(coxaGeom);
+      const coxa = new THREE.Mesh(coxaGeom, titaniumMat);
+      legPivot.add(coxa);
+
+      // Glowing Base Joint Sphere
+      const legJointBaseGeom = new THREE.SphereGeometry(0.065, 8, 8);
+      geometriesToDispose.push(legJointBaseGeom);
+      const baseJoint = new THREE.Mesh(legJointBaseGeom, crimsonGlowMat);
+      baseJoint.position.set(side * 0.08, 0, 0);
+      coxa.add(baseJoint);
+
       // 1. FEMUR (Upward/outward segment)
-      const femurLen = 0.85 + index * 0.12;
-      const femurGeom = new THREE.CylinderGeometry(0.045, 0.03, femurLen, 5);
+      const femurLen = 0.8 + index * 0.11;
+      const femurGeom = new THREE.CylinderGeometry(0.045, 0.032, femurLen, 6);
       femurGeom.translate(0, femurLen / 2, 0); // pivot at base
       geometriesToDispose.push(femurGeom);
-      const femur = new THREE.Mesh(femurGeom, redMat);
-      
-      const femurWire = new THREE.Mesh(femurGeom, glowMat);
-      femurWire.scale.set(1.15, 1.01, 1.15);
-      femur.add(femurWire);
+      const femur = new THREE.Mesh(femurGeom, titaniumMat);
+      baseJoint.add(femur);
+
+      // Glowing Knee Joint Sphere (Patella)
+      const kneeJointGeom = new THREE.SphereGeometry(0.045, 8, 8);
+      geometriesToDispose.push(kneeJointGeom);
+      const kneeJoint = new THREE.Mesh(kneeJointGeom, crimsonGlowMat);
+      kneeJoint.position.set(0, femurLen, 0);
+      femur.add(kneeJoint);
 
       // 2. TIBIA (Downward bending segment)
-      const tibiaLen = 1.0 + index * 0.15;
-      const tibiaGeom = new THREE.CylinderGeometry(0.03, 0.018, tibiaLen, 5);
+      const tibiaLen = 0.95 + index * 0.14;
+      const tibiaGeom = new THREE.CylinderGeometry(0.032, 0.02, tibiaLen, 6);
       tibiaGeom.translate(0, tibiaLen / 2, 0); // pivot at base
       geometriesToDispose.push(tibiaGeom);
-      const tibia = new THREE.Mesh(tibiaGeom, redMat);
+      const tibia = new THREE.Mesh(tibiaGeom, titaniumMat);
+      kneeJoint.add(tibia);
 
-      const tibiaWire = new THREE.Mesh(tibiaGeom, glowMat);
-      tibiaWire.scale.set(1.15, 1.01, 1.15);
-      tibia.add(tibiaWire);
-
-      // Position Tibia at end of Femur
-      tibia.position.set(0, femurLen, 0);
-      femur.add(tibia);
+      // Glowing Ankle Joint Sphere
+      const ankleJointGeom = new THREE.SphereGeometry(0.028, 6, 6);
+      geometriesToDispose.push(ankleJointGeom);
+      const ankleJoint = new THREE.Mesh(ankleJointGeom, crimsonGlowMat);
+      ankleJoint.position.set(0, tibiaLen, 0);
+      tibia.add(ankleJoint);
 
       // 3. TARSUS (The final foot claw segment pointing down)
-      const tarsusLen = 0.6 + index * 0.08;
-      const tarsusGeom = new THREE.CylinderGeometry(0.018, 0.005, tarsusLen, 5);
+      const tarsusLen = 0.55 + index * 0.07;
+      const tarsusGeom = new THREE.CylinderGeometry(0.02, 0.006, tarsusLen, 5);
       tarsusGeom.translate(0, tarsusLen / 2, 0); // pivot at base
       geometriesToDispose.push(tarsusGeom);
-      const tarsus = new THREE.Mesh(tarsusGeom, redMat);
+      const tarsus = new THREE.Mesh(tarsusGeom, titaniumMat);
+      ankleJoint.add(tarsus);
 
-      const tarsusWire = new THREE.Mesh(tarsusGeom, glowMat);
-      tarsusWire.scale.set(1.15, 1.01, 1.15);
-      tarsus.add(tarsusWire);
-
-      // Position Tarsus at end of Tibia
-      tarsus.position.set(0, tibiaLen, 0);
-      tibia.add(tarsus);
-
-      // Base realistic joint rotations to anchor nicely
-      const spreadAngle = (index - 1.5) * 0.42;
+      // Base realistic joint angles
+      const spreadAngle = (index - 1.5) * 0.44;
       
       femur.rotation.z = -side * (Math.PI / 3.4); // angled upward
       femur.rotation.y = spreadAngle; // angled forward/backward
       tibia.rotation.z = side * (Math.PI / 1.6); // bent downward sharply
       tarsus.rotation.z = side * (Math.PI / 3.6); // bent even lower towards ground
 
-      legPivot.add(femur);
       spiderGroup.add(legPivot);
 
       legObjects.push({ femur, tibia, tarsus, side, index });
@@ -458,8 +548,8 @@ export default function ThreeScene() {
           // ignore
         }
       });
-      redMat.dispose();
-      glowMat.dispose();
+      titaniumMat.dispose();
+      crimsonGlowMat.dispose();
       eyeMat.dispose();
       nodeMat.dispose();
       ringMat.dispose();

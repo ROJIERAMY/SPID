@@ -17,7 +17,7 @@ import { ecosystemBadges } from './data';
 import { translations } from './translations';
 
 export default function App() {
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const theme = 'dark';
   const [lang, setLang] = useState<'en' | 'ar'>('en');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [dialogType, setDialogType] = useState<'connect_node' | 'get_started' | 'book_consultation' | 'tier_init' | 'ecosystem_details' | null>(null);
@@ -29,14 +29,9 @@ export default function App() {
   const t = translations[lang];
 
   const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
+    // Permanently locked to premium dark mode as requested by user
     const root = document.documentElement;
-    if (nextTheme === 'light') {
-      root.classList.add('light');
-    } else {
-      root.classList.remove('light');
-    }
+    root.classList.remove('light');
   };
 
   const toggleLang = () => {

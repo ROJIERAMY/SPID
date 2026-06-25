@@ -243,60 +243,71 @@ export default function ServicePage({ serviceId, onBack, lang, t, onInquirePacka
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch text-start">
             {packagesList.map((pkg: ServicePackage, idx: number) => {
               const isPopular = idx === 1; // Mark the middle package as popular
+              const floatDuration = 5 + idx * 0.8;
               return (
                 <motion.div
                   key={pkg.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.1 }}
-                  className={`relative flex flex-col justify-between p-8 rounded-3xl bg-surface-container-low border transition-all duration-300 ${
-                    isPopular 
-                      ? isRed 
-                        ? 'border-secondary shadow-[0_0_25px_rgba(227,27,28,0.15)] bg-surface-container-high' 
-                        : 'border-primary shadow-[0_0_25px_rgba(255,78,0,0.15)] bg-surface-container-high'
-                      : 'border-outline-variant hover:border-outline'
-                  }`}
+                  className="h-full"
                 >
-                  {isPopular && (
-                    <span className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-on-primary ${isRed ? 'bg-secondary' : 'bg-primary'}`}>
-                      {lang === 'en' ? 'Most Popular' : 'الأكثر طلباً'}
-                    </span>
-                  )}
-
-                  <div className="space-y-6">
-                    <div>
-                      <h4 className="text-xl font-bold font-display text-on-surface">{pkg.name}</h4>
-                      <p className="text-xs text-on-surface-variant mt-1.5 leading-relaxed font-sans min-h-[32px]">{pkg.desc}</p>
-                    </div>
-
-                    <div className="py-4 border-y border-outline-variant/40">
-                      <span className="text-3xl font-extrabold font-display text-on-surface">{pkg.price}</span>
-                      <span className="text-xs text-on-surface-variant font-sans mx-1.5">{pkg.billing}</span>
-                    </div>
-
-                    <ul className="space-y-3">
-                      {pkg.features.map((feature, fIdx) => (
-                        <li key={fIdx} className="flex items-start gap-2 text-xs text-on-surface-variant">
-                          <Check className={`w-4 h-4 shrink-0 mt-0.5 ${isRed ? 'text-secondary' : 'text-primary'}`} />
-                          <span className="font-sans leading-relaxed">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <button
-                    onClick={() => onInquirePackage(pkg, titleText)}
-                    className={`w-full mt-8 py-3.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                      isPopular
+                  <motion.div
+                    animate={{ y: [0, -6, 0] }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: floatDuration,
+                      ease: 'easeInOut',
+                    }}
+                    className={`relative flex flex-col justify-between p-8 rounded-3xl bg-surface-container-low border transition-all duration-300 h-full ${
+                      isPopular 
                         ? isRed 
-                          ? 'bg-secondary text-on-primary hover:shadow-[0_0_15px_rgba(227,27,28,0.4)]' 
-                          : 'bg-primary text-on-primary hover:shadow-[0_0_15px_rgba(255,78,0,0.4)]'
-                        : 'border border-primary text-primary hover:bg-primary/5'
+                          ? 'border-secondary shadow-[0_0_25px_rgba(227,27,28,0.15)] bg-surface-container-high' 
+                          : 'border-primary shadow-[0_0_25px_rgba(255,78,0,0.15)] bg-surface-container-high'
+                        : 'border-outline-variant hover:border-outline hover:shadow-[0_10px_20px_rgba(255,255,255,0.02)]'
                     }`}
                   >
-                    <Calendar className="w-4 h-4" />
-                    {lang === 'en' ? 'Inquire/Book Package' : 'طلب واستشارة الباقة'}
-                  </button>
+                    {isPopular && (
+                      <span className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-on-primary ${isRed ? 'bg-secondary' : 'bg-primary'}`}>
+                        {lang === 'en' ? 'Most Popular' : 'الأكثر طلباً'}
+                      </span>
+                    )}
+
+                    <div className="space-y-6">
+                      <div>
+                        <h4 className="text-xl font-bold font-display text-on-surface">{pkg.name}</h4>
+                        <p className="text-xs text-on-surface-variant mt-1.5 leading-relaxed font-sans min-h-[32px]">{pkg.desc}</p>
+                      </div>
+
+                      <div className="py-4 border-y border-outline-variant/40">
+                        <span className="text-3xl font-extrabold font-display text-on-surface">{pkg.price}</span>
+                        <span className="text-xs text-on-surface-variant font-sans mx-1.5">{pkg.billing}</span>
+                      </div>
+
+                      <ul className="space-y-3">
+                        {pkg.features.map((feature, fIdx) => (
+                          <li key={fIdx} className="flex items-start gap-2 text-xs text-on-surface-variant">
+                            <Check className={`w-4 h-4 shrink-0 mt-0.5 ${isRed ? 'text-secondary' : 'text-primary'}`} />
+                            <span className="font-sans leading-relaxed">{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <button
+                      onClick={() => onInquirePackage(pkg, titleText)}
+                      className={`w-full mt-8 py-3.5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                        isPopular
+                          ? isRed 
+                            ? 'bg-secondary text-on-primary hover:shadow-[0_0_15px_rgba(227,27,28,0.4)]' 
+                            : 'bg-primary text-on-primary hover:shadow-[0_0_15px_rgba(255,78,0,0.4)]'
+                          : 'border border-primary text-primary hover:bg-primary/5'
+                      }`}
+                    >
+                      <Calendar className="w-4 h-4" />
+                      {lang === 'en' ? 'Inquire/Book Package' : 'طلب واستشارة الباقة'}
+                    </button>
+                  </motion.div>
                 </motion.div>
               );
             })}

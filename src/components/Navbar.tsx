@@ -103,14 +103,7 @@ export default function Navbar({ onConnectNode, onBookConsultation, theme, onTog
             {lang === 'en' ? 'العربية' : 'EN'}
           </button>
 
-          <button
-            onClick={onToggleTheme}
-            aria-label="Toggle theme mode"
-            className="p-2.5 rounded-full border border-outline hover:border-primary/50 text-on-surface-variant hover:text-primary hover:bg-primary/5 transition-all duration-300 bg-surface-container-low/40 cursor-pointer flex items-center justify-center"
-            title={theme === 'dark' ? t.themeLight : t.themeDark}
-          >
-            {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-500 filter drop-shadow-[0_0_4px_rgba(245,158,11,0.3)]" /> : <Moon className="w-4 h-4 text-primary" />}
-          </button>
+          {/* Theme is permanently set to dark for high-contrast cyberpunk consistency */}
 
           <motion.button 
             whileHover={{ scale: 1.03 }}
@@ -170,25 +163,7 @@ export default function Navbar({ onConnectNode, onBookConsultation, theme, onTog
             {t.navContact}
           </button>
           
-          <div className="flex items-center justify-between py-3 border-t border-outline/10 pt-4">
-            <span className="text-sm font-semibold text-on-surface-variant">{t.themeMode}</span>
-            <button
-              onClick={() => { onToggleTheme(); }}
-              className="p-2 px-3.5 rounded-xl border border-outline hover:border-primary/50 text-on-surface-variant hover:text-primary bg-surface-container-low/50 flex items-center gap-2 text-xs font-bold cursor-pointer"
-            >
-              {theme === 'dark' ? (
-                <>
-                  <Sun className="w-4 h-4 text-amber-500" />
-                  <span>{t.themeLight}</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-4 h-4 text-primary" />
-                  <span>{t.themeDark}</span>
-                </>
-              )}
-            </button>
-          </div>
+          {/* Removed theme mode toggle row to stick to premium dark theme only */}
 
           <div className="flex items-center justify-between py-3 border-t border-outline/10">
             <span className="text-sm font-semibold text-on-surface-variant">{lang === 'en' ? 'Language' : 'اللغة'}</span>

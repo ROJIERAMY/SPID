@@ -56,6 +56,7 @@ export default function Showcase({ lang, t }: ShowcaseProps) {
           const title = caseTitles[study.id] || study.title;
           const subtitle = caseSubtitles[study.id] || study.subtitle;
           const category = categoryTranslations[study.category] || study.category;
+          const floatDuration = 5 + (study.id.charCodeAt(0) % 3) * 0.8;
 
           return (
             <motion.div
@@ -64,37 +65,49 @@ export default function Showcase({ lang, t }: ShowcaseProps) {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: '-50px' }}
               transition={{ duration: 0.6, delay: index * 0.15 }}
-              className="glass-card rounded-[2rem] overflow-hidden group flex flex-col h-full hover:shadow-[0_10px_30px_rgba(255,78,0,0.1)] border-primary/10 hover:border-primary/40 transition-all duration-300"
             >
-              {/* Image Container with Hover zoom */}
-              <div className="h-60 md:h-64 bg-surface-container-low relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent z-10" />
-                <img 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
-                  alt={title} 
-                  src={study.imageUrl}
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-
-              {/* Card Content Details */}
-              <div className="p-8 flex flex-col justify-between flex-grow space-y-5 text-start">
-                <div className="space-y-2">
-                  <h4 className="font-display text-xl font-bold text-primary group-hover:text-primary transition-colors">
-                    {title}
-                  </h4>
-                  <p className="text-on-surface-variant text-sm leading-relaxed font-sans">
-                    {subtitle}
-                  </p>
+              {/* Subtle 3D Floating animation wrapping the actual card */}
+              <motion.div
+                animate={{ y: [0, -7, 0] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: floatDuration,
+                  ease: 'easeInOut',
+                }}
+                className="glass-card rounded-[2rem] overflow-hidden group flex flex-col h-full hover:shadow-[0_15px_35px_rgba(227,27,28,0.18)] border-primary/10 hover:border-primary/40 transition-all duration-300 bg-surface/40 backdrop-blur-md relative"
+              >
+                {/* Image Container with Hover zoom */}
+                <div className="h-60 md:h-64 bg-surface-container-low relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/70 via-transparent to-transparent z-10" />
+                  <img 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                    alt={title} 
+                    src={study.imageUrl}
+                    referrerPolicy="no-referrer"
+                  />
+                  {/* Digital micro-grid visual element */}
+                  <div className="absolute inset-0 opacity-[0.04] bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:12px_12px] z-20 pointer-events-none" />
                 </div>
 
-                {/* Tag Category */}
-                <div>
-                  <span className={`pill-badge py-1 px-3 ${(study?.category || '').includes('Systems') ? 'text-secondary hover:text-secondary hover:border-secondary/50 hover:bg-secondary/5' : 'text-primary hover:text-primary'}`}>
-                    {category}
-                  </span>
+                {/* Card Content Details */}
+                <div className="p-8 flex flex-col justify-between flex-grow space-y-5 text-start relative z-10">
+                  <div className="space-y-2">
+                    <h4 className="font-display text-xl font-bold text-primary group-hover:text-primary transition-colors">
+                      {title}
+                    </h4>
+                    <p className="text-on-surface-variant text-sm leading-relaxed font-sans">
+                      {subtitle}
+                    </p>
+                  </div>
+
+                  {/* Tag Category */}
+                  <div>
+                    <span className={`pill-badge py-1 px-3 ${(study?.category || '').includes('Systems') ? 'text-secondary border-secondary/20 bg-secondary/5 hover:text-secondary hover:border-secondary/50' : 'text-primary border-primary/20 bg-primary/5 hover:text-primary'}`}>
+                      {category}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
           );
         })}

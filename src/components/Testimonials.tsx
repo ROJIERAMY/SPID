@@ -36,6 +36,7 @@ export default function Testimonials({ lang, t }: TestimonialsProps) {
           const quoteText = testimonialQuotes[testimonial.id] || testimonial.quote;
           const authorText = testimonialAuthors[testimonial.id] || testimonial.author;
           const roleText = testimonialRoles[testimonial.id] || testimonial.role;
+          const floatDuration = 4.5 + (testimonial.id.charCodeAt(0) % 3) * 0.9;
 
           return (
             <motion.div
@@ -44,43 +45,52 @@ export default function Testimonials({ lang, t }: TestimonialsProps) {
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true, margin: '-50px' }}
               transition={{ duration: 0.5, delay: index * 0.15 }}
-              className={`p-10 rounded-3xl relative flex flex-col justify-between h-full group select-none
-                ${isRed 
-                  ? 'glass-card border-secondary/20 hover:border-secondary/40' 
-                  : 'glass-card border-primary/20 hover:border-primary/40'}`}
             >
-              {/* Back quote logo */}
-              <Quote className={`w-14 h-14 absolute top-6 right-6 opacity-5 group-hover:opacity-10 transition-opacity duration-300
-                ${isRed ? 'text-secondary' : 'text-primary'}`} 
-              />
+              <motion.div
+                animate={{ y: [0, -6, 0] }}
+                transition={{
+                  repeat: Infinity,
+                  duration: floatDuration,
+                  ease: 'easeInOut',
+                }}
+                className={`p-10 rounded-3xl relative flex flex-col justify-between h-full group select-none bg-surface/30 backdrop-blur-md transition-all duration-300
+                  ${isRed 
+                    ? 'glass-card border-primary/20 hover:border-primary/50 hover:shadow-[0_15px_30px_rgba(227,27,28,0.15)]' 
+                    : 'glass-card border-secondary/20 hover:border-secondary/50 hover:shadow-[0_15px_30px_rgba(0,130,255,0.15)]'}`}
+              >
+                {/* Back quote logo */}
+                <Quote className={`w-14 h-14 absolute top-6 right-6 opacity-5 group-hover:opacity-10 transition-opacity duration-300
+                  ${isRed ? 'text-primary' : 'text-secondary'}`} 
+                />
 
-              <div className="space-y-6 text-start">
-                {/* Quote Text */}
-                <p className="serif-value text-on-surface text-base md:text-lg italic leading-relaxed font-light">
-                  {quoteText}
-                </p>
+                <div className="space-y-6 text-start">
+                  {/* Quote Text */}
+                  <p className="serif-value text-on-surface text-base md:text-lg italic leading-relaxed font-light">
+                    {quoteText}
+                  </p>
 
-                {/* Profile Detail */}
-                <div className="flex items-center gap-4">
-                  {/* Initials Avatar */}
-                  <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-bold text-sm select-none shrink-0
-                    ${isRed 
-                      ? 'bg-secondary/10 border-secondary/30 text-secondary' 
-                      : 'bg-primary/10 border-primary/30 text-primary'}`}
-                  >
-                    {testimonial.initials}
-                  </div>
-
-                  <div>
-                    <div className="font-bold text-sm md:text-base text-on-surface">
-                      {authorText}
+                  {/* Profile Detail */}
+                  <div className="flex items-center gap-4">
+                    {/* Initials Avatar */}
+                    <div className={`w-12 h-12 rounded-full border flex items-center justify-center font-bold text-sm select-none shrink-0
+                      ${isRed 
+                        ? 'bg-primary/10 border-primary/30 text-primary' 
+                        : 'bg-secondary/10 border-secondary/30 text-secondary'}`}
+                    >
+                      {testimonial.initials}
                     </div>
-                    <div className="text-xs text-on-surface-variant font-medium">
-                      {roleText}
+
+                    <div>
+                      <div className="font-bold text-sm md:text-base text-on-surface">
+                        {authorText}
+                      </div>
+                      <div className="text-xs text-on-surface-variant font-medium">
+                        {roleText}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </motion.div>
           );
         })}

@@ -20,24 +20,7 @@
   --color-outline-variant: rgba(255, 255, 255, 0.06);
 }
 
-.light {
-  --color-primary: #C81012; /* High contrast red on light */
-  --color-secondary: #0055D0; /* High contrast blue on light */
-  --color-background: #FDFDFE; /* Soft paper white background */
-  --color-surface: #F4F4F7;
-  --color-surface-container: #E9EAEF;
-  --color-surface-container-high: #DDDEE5;
-  --color-surface-container-low: #F6F7FA;
-  --color-surface-container-lowest: #FFFFFF;
-  --color-on-surface: #0E0E12; /* Crisp near-black text */
-  --color-on-surface-variant: #3F4049; /* Highly readable secondary gray text (contrast >= 4.5:1) */
-  --color-on-primary: #FFFFFF;
-  --color-primary-container: #C81012;
-  --color-secondary-container: #0055D0;
-  --color-on-secondary: #FFFFFF;
-  --color-outline: rgba(14, 14, 18, 0.16);
-  --color-outline-variant: rgba(14, 14, 18, 0.08);
-}
+/* Dark-only modern variables (removed light theme to prevent visual breakage) */
 
 @theme {
   --color-primary: var(--color-primary);
@@ -148,29 +131,7 @@ body {
   background-color: rgba(227, 27, 28, 0.04);
 }
 
-/* Light theme overrides for custom components */
-.light .glass-card {
-  background: linear-gradient(135deg, rgba(14, 14, 18, 0.02) 0%, rgba(14, 14, 18, 0.04) 100%);
-  border: 1px solid rgba(14, 14, 18, 0.08);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.02);
-}
-
-.light .glass-card:hover {
-  border-color: rgba(200, 16, 18, 0.4);
-  box-shadow: 0 12px 40px rgba(200, 16, 18, 0.1);
-}
-
-.light .cyber-grid {
-  background-image: 
-    linear-gradient(rgba(200, 16, 18, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(200, 16, 18, 0.03) 1px, transparent 1px);
-}
-
-.light .ecosystem-red-blue {
-  background: radial-gradient(circle at top left, rgba(200, 16, 18, 0.04), transparent 65%),
-              radial-gradient(circle at bottom right, rgba(0, 85, 208, 0.05), transparent 65%);
-  border: 1px solid rgba(14, 14, 18, 0.08);
-}
+/* Completed light theme removal */
 
 .serif-value {
   font-family: var(--font-sans);

@@ -86,6 +86,8 @@ export default function Ecosystem({ onEcosystemSelect, lang, t }: EcosystemProps
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {pillars.map((pillar, index) => {
               const IconComponent = pillar.icon;
+              const floatDuration = 4.8 + index * 0.6;
+
               return (
                 <motion.div
                   key={pillar.id}
@@ -93,17 +95,26 @@ export default function Ecosystem({ onEcosystemSelect, lang, t }: EcosystemProps
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ duration: 0.4, delay: index * 0.1 }}
-                  className="p-6 rounded-2xl bg-surface/30 border border-white/5 hover:border-primary/20 transition-all group hover:bg-surface/50 text-start"
                 >
-                  <div className={`p-3 rounded-xl border w-fit mb-4 transition-transform duration-300 group-hover:scale-105 ${pillar.colorClass}`}>
-                    <IconComponent className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-base font-bold text-white mb-2 group-hover:text-primary transition-colors">
-                    {pillar.title}
-                  </h3>
-                  <p className="text-xs text-on-surface-variant leading-relaxed">
-                    {pillar.description}
-                  </p>
+                  <motion.div
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{
+                      repeat: Infinity,
+                      duration: floatDuration,
+                      ease: 'easeInOut',
+                    }}
+                    className="p-6 rounded-2xl bg-surface/30 border border-white/5 hover:border-primary/30 transition-all group hover:bg-surface/50 text-start"
+                  >
+                    <div className={`p-3 rounded-xl border w-fit mb-4 transition-transform duration-300 group-hover:scale-105 ${pillar.colorClass}`}>
+                      <IconComponent className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-base font-bold text-white mb-2 group-hover:text-primary transition-colors">
+                      {pillar.title}
+                    </h3>
+                    <p className="text-xs text-on-surface-variant leading-relaxed">
+                      {pillar.description}
+                    </p>
+                  </motion.div>
                 </motion.div>
               );
             })}
