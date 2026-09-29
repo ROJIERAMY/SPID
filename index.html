@@ -60,7 +60,7 @@ html[dir="rtl"] .receipt{direction:rtl;text-align:right}
         <div class="demobox" id="demoCreds"></div>
       </div>
       <div id="customerAuthPanel" class="hidden">
-        <div class="notice" style="margin-top:14px"><b>Customer Email Login</b><div class="muted">Enter your email and we’ll send you a 6-digit OTP. No password needed.</div></div>
+        <div class="notice" style="margin-top:14px"><b>Customer Email Login</b><div class="muted">Enter your email and we’ll send you a one-time verification code. No password needed.</div></div>
         <div id="emailStep">
           <div class="formgrid">
             <div class="field"><label>Customer Name</label><input id="customerAuthName" class="input" placeholder="Your name"></div>
@@ -72,7 +72,7 @@ html[dir="rtl"] .receipt{direction:rtl;text-align:right}
           </div>
         </div>
         <div id="otpStep" class="hidden">
-          <div class="field"><label>6-digit OTP</label><input id="customerOtpCode" class="input ltr" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="123456"></div>
+          <div class="field"><label>OTP Code</label><input id="customerOtpCode" class="input ltr" inputmode="numeric" maxlength="8" autocomplete="one-time-code" placeholder="Enter code"></div>
           <div class="actions" style="margin-top:12px">
             <button class="btn primary" style="flex:1" onclick="verifyCustomerEmailOTP()">Verify & Continue</button>
             <button class="btn" onclick="backToEmail()">Change Email</button>
@@ -267,7 +267,7 @@ async function sendCustomerEmailOTP(){
 }
 async function verifyCustomerEmailOTP(){
   const token=(customerOtpCode.value||'').trim();
-  if(!/^\d{6}$/.test(token)){toast(currentLang==='ar'?'اكتب كود مكون من 6 أرقام':'Enter the 6-digit OTP');return}
+  if(!/^\d{6,8}$/.test(token)){toast(currentLang==='ar'?'اكتب كود التحقق كاملًا':'Enter the full OTP code');return}
   const {data,error}=await spidDb.auth.verifyOtp({email:pendingCustomerEmail,token,type:'email'});
   if(error||!data?.session){
     console.error(error);
@@ -494,7 +494,7 @@ const AR={
 'Invoice':'فاتورة','Cashier':'الكاشير','Mobile':'الموبايل','Tax ID':'الرقم الضريبي','Payment':'طريقة الدفع','Item':'الصنف','Qty':'الكمية','Thank you for shopping with us.':'شكرًا لزيارتكم.','Invoice History':'سجل الفواتير','Recent cashier receipts':'أحدث فواتير الكاشير','View / Reprint':'عرض / إعادة طباعة',
 'Product QR Scanner':'ماسح QR للمنتجات','Point the camera at a SPID product QR code.':'وجّه الكاميرا إلى QR الخاص بالمنتج.','Starting camera…':'جاري تشغيل الكاميرا…','Manual QR fallback':'إدخال QR يدويًا','Barcode Scan':'مسح الباركود','Expense':'المصروف','Amount':'المبلغ','Actual Cash':'النقدية الفعلية','Done':'تم','Save / Confirm':'حفظ / تأكيد','Confirm deletion':'تأكيد الحذف',
 'Cappuccino':'كابتشينو','Turkey Sandwich':'ساندوتش تركي','Mineral Water':'مياه معدنية','Orange Juice':'عصير برتقال','Potato Chips':'شيبسي','Dark Chocolate':'شوكولاتة دارك','Fresh Milk':'لبن طازج','Butter Croissant':'كرواسون بالزبدة','Coffee':'قهوة','Fresh Food':'أطعمة طازجة','Drinks':'مشروبات','Snacks':'سناكس','Dairy':'ألبان','Bakery':'مخبوزات',
-'On shift':'في الشيفت','Break':'استراحة','Off':'إجازة','Scheduled':'مجدول','Barista':'باريستا','Storekeeper':'أمين مخزن','Supervisor':'مشرف','Delivery':'توصيل','Active':'نشط','Inactive':'غير نشط','Customer Login':'دخول العميل','Customer Email Login':'دخول العميل بالبريد الإلكتروني','Enter your email and we’ll send you a 6-digit OTP. No password needed.':'اكتب بريدك الإلكتروني وسنرسل لك كود تحقق من 6 أرقام بدون كلمة مرور.','Email Address':'البريد الإلكتروني','Send Email OTP':'إرسال كود على الإيميل','Change Email':'تغيير البريد الإلكتروني','Guest checkout is still available without creating an account.':'لا يزال بإمكانك الطلب كضيف بدون إنشاء حساب.','Enter your email and we’ll send you a 6-digit OTP. No password needed.':'استخدم رقم الموبايل فقط. لا تحتاج بريد إلكتروني.','Your name':'اسمك','OTP Channel':'طريقة إرسال الكود','Send OTP':'إرسال الكود','Continue as Guest':'المتابعة كضيف','6-digit OTP':'كود التحقق 6 أرقام','Verify & Continue':'تأكيد ومتابعة','Change Number':'تغيير الرقم','Guest checkout is available without creating an account.':'يمكنك الطلب كضيف بدون إنشاء حساب.','Guest':'ضيف','Customer & Order Details':'بيانات العميل والطلب','Cash at counter':'الدفع نقدًا عند الكاشير','Online Payment (coming next)':'دفع أونلاين (سيتم ربطه لاحقًا)','Guest checkout is allowed. Your order will appear live for the cashier.':'يمكن الطلب كضيف، وسيظهر الطلب مباشرة عند الكاشير.','The order is saved in the live database and is visible to the cashier.':'تم حفظ الطلب في قاعدة البيانات وسيظهر مباشرة عند الكاشير.'
+'On shift':'في الشيفت','Break':'استراحة','Off':'إجازة','Scheduled':'مجدول','Barista':'باريستا','Storekeeper':'أمين مخزن','Supervisor':'مشرف','Delivery':'توصيل','Active':'نشط','Inactive':'غير نشط','Customer Login':'دخول العميل','Customer Email Login':'دخول العميل بالبريد الإلكتروني','Enter your email and we’ll send you a one-time verification code. No password needed.':'اكتب بريدك الإلكتروني وسنرسل لك كود تحقق من 6 أرقام بدون كلمة مرور.','Email Address':'البريد الإلكتروني','Send Email OTP':'إرسال كود على الإيميل','Change Email':'تغيير البريد الإلكتروني','Guest checkout is still available without creating an account.':'لا يزال بإمكانك الطلب كضيف بدون إنشاء حساب.','Enter your email and we’ll send you a one-time verification code. No password needed.':'استخدم رقم الموبايل فقط. لا تحتاج بريد إلكتروني.','Your name':'اسمك','OTP Channel':'طريقة إرسال الكود','Send OTP':'إرسال الكود','Continue as Guest':'المتابعة كضيف','OTP Code':'كود التحقق','Verify & Continue':'تأكيد ومتابعة','Change Number':'تغيير الرقم','Guest checkout is available without creating an account.':'يمكنك الطلب كضيف بدون إنشاء حساب.','Guest':'ضيف','Customer & Order Details':'بيانات العميل والطلب','Cash at counter':'الدفع نقدًا عند الكاشير','Online Payment (coming next)':'دفع أونلاين (سيتم ربطه لاحقًا)','Guest checkout is allowed. Your order will appear live for the cashier.':'يمكن الطلب كضيف، وسيظهر الطلب مباشرة عند الكاشير.','The order is saved in the live database and is visible to the cashier.':'تم حفظ الطلب في قاعدة البيانات وسيظهر مباشرة عند الكاشير.'
 };
 const AR_KEYS=Object.keys(AR).sort((a,b)=>b.length-a.length);
 const originalText=new WeakMap();
