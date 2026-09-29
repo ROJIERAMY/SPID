@@ -60,27 +60,26 @@ html[dir="rtl"] .receipt{direction:rtl;text-align:right}
         <div class="demobox" id="demoCreds"></div>
       </div>
       <div id="customerAuthPanel" class="hidden">
-        <div class="notice" style="margin-top:14px"><b>Customer Login</b><div class="muted">Use your mobile number. No email required.</div></div>
-        <div id="phoneStep">
+        <div class="notice" style="margin-top:14px"><b>Customer Email Login</b><div class="muted">Enter your email and we’ll send you a 6-digit OTP. No password needed.</div></div>
+        <div id="emailStep">
           <div class="formgrid">
             <div class="field"><label>Customer Name</label><input id="customerAuthName" class="input" placeholder="Your name"></div>
-            <div class="field"><label>Mobile Number</label><input id="customerAuthPhone" class="input ltr" inputmode="tel" placeholder="01xxxxxxxxx or +20..."></div>
-            <div class="field"><label>OTP Channel</label><select id="customerOtpChannel" class="input"><option value="sms">SMS</option><option value="whatsapp">WhatsApp</option></select></div>
+            <div class="field"><label>Email Address</label><input id="customerAuthEmail" class="input ltr" type="email" autocomplete="email" placeholder="name@example.com"></div>
           </div>
           <div class="actions" style="margin-top:12px">
-            <button class="btn primary" style="flex:1" onclick="sendCustomerOTP()">Send OTP</button>
+            <button class="btn primary" style="flex:1" onclick="sendCustomerEmailOTP()">Send Email OTP</button>
             <button class="btn" style="flex:1" onclick="continueAsGuest()">Continue as Guest</button>
           </div>
         </div>
         <div id="otpStep" class="hidden">
-          <div class="field"><label>6-digit OTP</label><input id="customerOtpCode" class="input ltr" inputmode="numeric" maxlength="6" placeholder="123456"></div>
+          <div class="field"><label>6-digit OTP</label><input id="customerOtpCode" class="input ltr" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="123456"></div>
           <div class="actions" style="margin-top:12px">
-            <button class="btn primary" style="flex:1" onclick="verifyCustomerOTP()">Verify & Continue</button>
-            <button class="btn" onclick="backToPhone()">Change Number</button>
+            <button class="btn primary" style="flex:1" onclick="verifyCustomerEmailOTP()">Verify & Continue</button>
+            <button class="btn" onclick="backToEmail()">Change Email</button>
           </div>
           <div class="muted" id="otpHint" style="margin-top:10px"></div>
         </div>
-        <div class="muted" style="margin-top:12px">Guest checkout is available without creating an account.</div>
+        <div class="muted" style="margin-top:12px">Guest checkout is still available without creating an account.</div>
       </div>
     </div>
   </div>
@@ -235,51 +234,55 @@ function selectRole(r){
   document.querySelectorAll('.rolecard').forEach(x=>x.classList.remove('active'));
   document.getElementById('role-'+r).classList.add('active');
   const staffForm=document.getElementById('loginForm'),customerPanel=document.getElementById('customerAuthPanel');
-  if(r==='customer'){staffForm.classList.add('hidden');customerPanel.classList.remove('hidden');backToPhone();}
+  if(r==='customer'){staffForm.classList.add('hidden');customerPanel.classList.remove('hidden');backToEmail();}
   else{customerPanel.classList.add('hidden');staffForm.classList.remove('hidden');loginUser.value=roleInfo[r].user;loginPass.value=roleInfo[r].pass;demoCreds.innerHTML='<b>'+roleInfo[r].label+' demo:</b> '+roleInfo[r].user+' / '+roleInfo[r].pass;}
 }
 
-let pendingCustomerPhone='',pendingOtpChannel='sms';
-function normalizeEgyptPhone(raw){
-  let p=String(raw||'').replace(/[\s\-()]/g,'');
-  if(p.startsWith('0020'))p='+'+p.slice(2);
-  if(p.startsWith('0'))p='+20'+p.slice(1);
-  if(p.startsWith('20'))p='+'+p;
-  if(!p.startsWith('+'))p='+20'+p;
-  return p;
-}
-function validEgyptMobile(p){return /^\+201[0125]\d{8}$/.test(p)}
-function backToPhone(){
-  document.getElementById('phoneStep')?.classList.remove('hidden');
+
+let pendingCustomerEmail='';
+function validCustomerEmail(email){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email||'').trim())}
+function backToEmail(){
+  document.getElementById('emailStep')?.classList.remove('hidden');
   document.getElementById('otpStep')?.classList.add('hidden');
   const code=document.getElementById('customerOtpCode');if(code)code.value='';
 }
-async function sendCustomerOTP(){
+async function sendCustomerEmailOTP(){
   const name=(customerAuthName.value||'').trim();
-  const phone=normalizeEgyptPhone(customerAuthPhone.value);
-  const channel=customerOtpChannel.value||'sms';
+  const email=(customerAuthEmail.value||'').trim().toLowerCase();
   if(!name){toast(currentLang==='ar'?'اكتب اسمك':'Enter your name');return}
-  if(!validEgyptMobile(phone)){toast(currentLang==='ar'?'اكتب رقم موبايل مصري صحيح':'Enter a valid Egyptian mobile number');return}
-  const {error}=await spidDb.auth.signInWithOtp({phone,options:{shouldCreateUser:true,data:{full_name:name},channel}});
-  if(error){console.error(error);toast(currentLang==='ar'?'تعذر إرسال الكود. إعداد مزود SMS/WhatsApp مطلوب.':'Could not send OTP. SMS/WhatsApp provider setup is required.');return}
-  pendingCustomerPhone=phone;pendingOtpChannel=channel;
-  phoneStep.classList.add('hidden');otpStep.classList.remove('hidden');
-  otpHint.textContent=(channel==='whatsapp'?'OTP sent by WhatsApp to ':'OTP sent by SMS to ')+phone;
+  if(!validCustomerEmail(email)){toast(currentLang==='ar'?'اكتب بريد إلكتروني صحيح':'Enter a valid email address');return}
+  const {error}=await spidDb.auth.signInWithOtp({
+    email,
+    options:{shouldCreateUser:true,data:{full_name:name}}
+  });
+  if(error){
+    console.error(error);
+    toast((currentLang==='ar'?'تعذر إرسال كود التحقق: ':'Could not send OTP: ')+error.message);
+    return;
+  }
+  pendingCustomerEmail=email;
+  emailStep.classList.add('hidden');otpStep.classList.remove('hidden');
+  otpHint.textContent=(currentLang==='ar'?'تم إرسال كود التحقق إلى ':'OTP sent to ')+email;
   setTimeout(()=>applyLanguage(document),0);
 }
-async function verifyCustomerOTP(){
+async function verifyCustomerEmailOTP(){
   const token=(customerOtpCode.value||'').trim();
   if(!/^\d{6}$/.test(token)){toast(currentLang==='ar'?'اكتب كود مكون من 6 أرقام':'Enter the 6-digit OTP');return}
-  const {data,error}=await spidDb.auth.verifyOtp({phone:pendingCustomerPhone,token,type:'sms'});
-  if(error||!data?.session){toast(currentLang==='ar'?'الكود غير صحيح أو انتهت صلاحيته':'Invalid or expired OTP');return}
+  const {data,error}=await spidDb.auth.verifyOtp({email:pendingCustomerEmail,token,type:'email'});
+  if(error||!data?.session){
+    console.error(error);
+    toast(currentLang==='ar'?'الكود غير صحيح أو انتهت صلاحيته':'Invalid or expired OTP');
+    return;
+  }
   const user=data.session.user;
-  const name=user.user_metadata?.full_name||customerAuthName.value.trim()||user.phone||'Customer';
-  session={role:'customer',name,phone:user.phone||pendingCustomerPhone,guest:false,authUserId:user.id};
+  const name=user.user_metadata?.full_name||customerAuthName.value.trim()||user.email||'Customer';
+  session={role:'customer',name,email:user.email||pendingCustomerEmail,phone:'',guest:false,authUserId:user.id};
   localStorage.setItem('spidSession',JSON.stringify(session));
-  showWorkspace();toast(currentLang==='ar'?'تم تسجيل الدخول':'Signed in successfully');
+  showWorkspace();
+  toast(currentLang==='ar'?'تم تسجيل الدخول':'Signed in successfully');
 }
 function continueAsGuest(){
-  session={role:'customer',name:'Guest Customer',phone:'',guest:true};
+  session={role:'customer',name:'Guest Customer',email:'',phone:'',guest:true};
   localStorage.setItem('spidSession',JSON.stringify(session));
   showWorkspace();
 }
@@ -491,7 +494,7 @@ const AR={
 'Invoice':'فاتورة','Cashier':'الكاشير','Mobile':'الموبايل','Tax ID':'الرقم الضريبي','Payment':'طريقة الدفع','Item':'الصنف','Qty':'الكمية','Thank you for shopping with us.':'شكرًا لزيارتكم.','Invoice History':'سجل الفواتير','Recent cashier receipts':'أحدث فواتير الكاشير','View / Reprint':'عرض / إعادة طباعة',
 'Product QR Scanner':'ماسح QR للمنتجات','Point the camera at a SPID product QR code.':'وجّه الكاميرا إلى QR الخاص بالمنتج.','Starting camera…':'جاري تشغيل الكاميرا…','Manual QR fallback':'إدخال QR يدويًا','Barcode Scan':'مسح الباركود','Expense':'المصروف','Amount':'المبلغ','Actual Cash':'النقدية الفعلية','Done':'تم','Save / Confirm':'حفظ / تأكيد','Confirm deletion':'تأكيد الحذف',
 'Cappuccino':'كابتشينو','Turkey Sandwich':'ساندوتش تركي','Mineral Water':'مياه معدنية','Orange Juice':'عصير برتقال','Potato Chips':'شيبسي','Dark Chocolate':'شوكولاتة دارك','Fresh Milk':'لبن طازج','Butter Croissant':'كرواسون بالزبدة','Coffee':'قهوة','Fresh Food':'أطعمة طازجة','Drinks':'مشروبات','Snacks':'سناكس','Dairy':'ألبان','Bakery':'مخبوزات',
-'On shift':'في الشيفت','Break':'استراحة','Off':'إجازة','Scheduled':'مجدول','Barista':'باريستا','Storekeeper':'أمين مخزن','Supervisor':'مشرف','Delivery':'توصيل','Active':'نشط','Inactive':'غير نشط','Customer Login':'دخول العميل','Use your mobile number. No email required.':'استخدم رقم الموبايل فقط. لا تحتاج بريد إلكتروني.','Your name':'اسمك','OTP Channel':'طريقة إرسال الكود','Send OTP':'إرسال الكود','Continue as Guest':'المتابعة كضيف','6-digit OTP':'كود التحقق 6 أرقام','Verify & Continue':'تأكيد ومتابعة','Change Number':'تغيير الرقم','Guest checkout is available without creating an account.':'يمكنك الطلب كضيف بدون إنشاء حساب.','Guest':'ضيف','Customer & Order Details':'بيانات العميل والطلب','Cash at counter':'الدفع نقدًا عند الكاشير','Online Payment (coming next)':'دفع أونلاين (سيتم ربطه لاحقًا)','Guest checkout is allowed. Your order will appear live for the cashier.':'يمكن الطلب كضيف، وسيظهر الطلب مباشرة عند الكاشير.','The order is saved in the live database and is visible to the cashier.':'تم حفظ الطلب في قاعدة البيانات وسيظهر مباشرة عند الكاشير.'
+'On shift':'في الشيفت','Break':'استراحة','Off':'إجازة','Scheduled':'مجدول','Barista':'باريستا','Storekeeper':'أمين مخزن','Supervisor':'مشرف','Delivery':'توصيل','Active':'نشط','Inactive':'غير نشط','Customer Login':'دخول العميل','Customer Email Login':'دخول العميل بالبريد الإلكتروني','Enter your email and we’ll send you a 6-digit OTP. No password needed.':'اكتب بريدك الإلكتروني وسنرسل لك كود تحقق من 6 أرقام بدون كلمة مرور.','Email Address':'البريد الإلكتروني','Send Email OTP':'إرسال كود على الإيميل','Change Email':'تغيير البريد الإلكتروني','Guest checkout is still available without creating an account.':'لا يزال بإمكانك الطلب كضيف بدون إنشاء حساب.','Enter your email and we’ll send you a 6-digit OTP. No password needed.':'استخدم رقم الموبايل فقط. لا تحتاج بريد إلكتروني.','Your name':'اسمك','OTP Channel':'طريقة إرسال الكود','Send OTP':'إرسال الكود','Continue as Guest':'المتابعة كضيف','6-digit OTP':'كود التحقق 6 أرقام','Verify & Continue':'تأكيد ومتابعة','Change Number':'تغيير الرقم','Guest checkout is available without creating an account.':'يمكنك الطلب كضيف بدون إنشاء حساب.','Guest':'ضيف','Customer & Order Details':'بيانات العميل والطلب','Cash at counter':'الدفع نقدًا عند الكاشير','Online Payment (coming next)':'دفع أونلاين (سيتم ربطه لاحقًا)','Guest checkout is allowed. Your order will appear live for the cashier.':'يمكن الطلب كضيف، وسيظهر الطلب مباشرة عند الكاشير.','The order is saved in the live database and is visible to the cashier.':'تم حفظ الطلب في قاعدة البيانات وسيظهر مباشرة عند الكاشير.'
 };
 const AR_KEYS=Object.keys(AR).sort((a,b)=>b.length-a.length);
 const originalText=new WeakMap();
@@ -545,7 +548,19 @@ const _askDelete=askDelete; askDelete=function(t,i,l){_askDelete(t,i,l);setTimeo
 const _renderCustomerProducts=renderCustomerProducts; renderCustomerProducts=function(){_renderCustomerProducts();setTimeout(()=>applyLanguage(document),0)};
 const _toast=toast; toast=function(t){_toast(currentLang==='ar'?translateString(t):t)};
 
+async function restoreCustomerAuthSession(){
+  try{
+    const {data}=await spidDb.auth.getSession();
+    const authSession=data?.session;
+    if(authSession?.user && (!session || session.role==='customer')){
+      const user=authSession.user;
+      session={role:'customer',name:user.user_metadata?.full_name||user.email||'Customer',email:user.email||'',phone:'',guest:false,authUserId:user.id};
+      localStorage.setItem('spidSession',JSON.stringify(session));
+    }
+  }catch(e){console.error('Auth session restore',e)}
+}
 initRemoteState();
+restoreCustomerAuthSession();
 setTimeout(()=>{applyLanguage(document);splash.classList.add('hidden');if(session){showWorkspace()}else{loginScreen.classList.remove('hidden');selectRole('owner')}setTimeout(()=>applyLanguage(document),20)},1900);
 </script>
 </body>
