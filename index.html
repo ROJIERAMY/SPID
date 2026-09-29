@@ -59,6 +59,29 @@ html[dir="rtl"] .receipt{direction:rtl;text-align:right}
         <div class="actions"><button class="btn primary" style="flex:1" onclick="signIn()">Sign In</button><button class="btn" style="flex:1" onclick="demoLogin()">Continue as Demo</button></div>
         <div class="demobox" id="demoCreds"></div>
       </div>
+      <div id="customerAuthPanel" class="hidden">
+        <div class="notice" style="margin-top:14px"><b>Customer Login</b><div class="muted">Use your mobile number. No email required.</div></div>
+        <div id="phoneStep">
+          <div class="formgrid">
+            <div class="field"><label>Customer Name</label><input id="customerAuthName" class="input" placeholder="Your name"></div>
+            <div class="field"><label>Mobile Number</label><input id="customerAuthPhone" class="input ltr" inputmode="tel" placeholder="01xxxxxxxxx or +20..."></div>
+            <div class="field"><label>OTP Channel</label><select id="customerOtpChannel" class="input"><option value="sms">SMS</option><option value="whatsapp">WhatsApp</option></select></div>
+          </div>
+          <div class="actions" style="margin-top:12px">
+            <button class="btn primary" style="flex:1" onclick="sendCustomerOTP()">Send OTP</button>
+            <button class="btn" style="flex:1" onclick="continueAsGuest()">Continue as Guest</button>
+          </div>
+        </div>
+        <div id="otpStep" class="hidden">
+          <div class="field"><label>6-digit OTP</label><input id="customerOtpCode" class="input ltr" inputmode="numeric" maxlength="6" placeholder="123456"></div>
+          <div class="actions" style="margin-top:12px">
+            <button class="btn primary" style="flex:1" onclick="verifyCustomerOTP()">Verify & Continue</button>
+            <button class="btn" onclick="backToPhone()">Change Number</button>
+          </div>
+          <div class="muted" id="otpHint" style="margin-top:10px"></div>
+        </div>
+        <div class="muted" style="margin-top:12px">Guest checkout is available without creating an account.</div>
+      </div>
     </div>
   </div>
 </section>
@@ -80,7 +103,7 @@ html[dir="rtl"] .receipt{direction:rtl;text-align:right}
 
 <section id="customerScreen" class="screen hidden">
   <div class="storefront">
-    <div class="storetop"><div><div class="eyebrow">SPID MINI MARKET</div><h2 style="margin:5px 0">Customer Store</h2><div class="muted">Order from your phone · Cairo Demo Branch</div></div><div class="actions"><button class="btn langToggle" data-lang-ignore onclick="toggleLanguage()">العربية</button><span class="pill">Customer</span><button class="btn" onclick="logout()">Logout</button></div></div>
+    <div class="storetop"><div><div class="eyebrow">SPID MINI MARKET</div><h2 style="margin:5px 0">Customer Store</h2><div class="muted">Order from your phone · Cairo Demo Branch</div></div><div class="actions"><button class="btn langToggle" data-lang-ignore onclick="toggleLanguage()">العربية</button><span class="pill" id="customerAuthBadge">Customer</span><button class="btn" onclick="logout()">Logout</button></div></div>
     <div class="toolbar"><input class="input" id="customerSearch" placeholder="Search products..." oninput="renderCustomerProducts()" style="max-width:390px"><span class="muted">VAT 14%</span></div>
     <div id="customerProducts" class="storegrid"></div>
     <div class="customerbar"><div><b id="customerCartCount">0 items</b><div class="muted" id="customerCartTotal">EGP 0</div></div><button class="btn primary" onclick="customerCheckout()">Checkout Order</button></div>
@@ -207,13 +230,65 @@ function audit(action,module){if(!session)return;S.audit.unshift({time:new Date(
 function esc(x){return String(x??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
 
 document.getElementById('roleCards').innerHTML=Object.entries(roleInfo).map(([k,r])=>'<button class="rolecard" id="role-'+k+'" onclick="selectRole(\''+k+'\')"><div class="roleicon">'+r.icon+'</div><b>'+r.label+'</b><small>'+r.desc+'</small></button>').join('');
-function selectRole(r){selectedRole=r;document.querySelectorAll('.rolecard').forEach(x=>x.classList.remove('active'));document.getElementById('role-'+r).classList.add('active');document.getElementById('loginForm').classList.remove('hidden');loginUser.value=roleInfo[r].user;loginPass.value=roleInfo[r].pass;demoCreds.innerHTML='<b>'+roleInfo[r].label+' demo:</b> '+roleInfo[r].user+' / '+roleInfo[r].pass}
+function selectRole(r){
+  selectedRole=r;
+  document.querySelectorAll('.rolecard').forEach(x=>x.classList.remove('active'));
+  document.getElementById('role-'+r).classList.add('active');
+  const staffForm=document.getElementById('loginForm'),customerPanel=document.getElementById('customerAuthPanel');
+  if(r==='customer'){staffForm.classList.add('hidden');customerPanel.classList.remove('hidden');backToPhone();}
+  else{customerPanel.classList.add('hidden');staffForm.classList.remove('hidden');loginUser.value=roleInfo[r].user;loginPass.value=roleInfo[r].pass;demoCreds.innerHTML='<b>'+roleInfo[r].label+' demo:</b> '+roleInfo[r].user+' / '+roleInfo[r].pass;}
+}
+
+let pendingCustomerPhone='',pendingOtpChannel='sms';
+function normalizeEgyptPhone(raw){
+  let p=String(raw||'').replace(/[\s\-()]/g,'');
+  if(p.startsWith('0020'))p='+'+p.slice(2);
+  if(p.startsWith('0'))p='+20'+p.slice(1);
+  if(p.startsWith('20'))p='+'+p;
+  if(!p.startsWith('+'))p='+20'+p;
+  return p;
+}
+function validEgyptMobile(p){return /^\+201[0125]\d{8}$/.test(p)}
+function backToPhone(){
+  document.getElementById('phoneStep')?.classList.remove('hidden');
+  document.getElementById('otpStep')?.classList.add('hidden');
+  const code=document.getElementById('customerOtpCode');if(code)code.value='';
+}
+async function sendCustomerOTP(){
+  const name=(customerAuthName.value||'').trim();
+  const phone=normalizeEgyptPhone(customerAuthPhone.value);
+  const channel=customerOtpChannel.value||'sms';
+  if(!name){toast(currentLang==='ar'?'اكتب اسمك':'Enter your name');return}
+  if(!validEgyptMobile(phone)){toast(currentLang==='ar'?'اكتب رقم موبايل مصري صحيح':'Enter a valid Egyptian mobile number');return}
+  const {error}=await spidDb.auth.signInWithOtp({phone,options:{shouldCreateUser:true,data:{full_name:name},channel}});
+  if(error){console.error(error);toast(currentLang==='ar'?'تعذر إرسال الكود. إعداد مزود SMS/WhatsApp مطلوب.':'Could not send OTP. SMS/WhatsApp provider setup is required.');return}
+  pendingCustomerPhone=phone;pendingOtpChannel=channel;
+  phoneStep.classList.add('hidden');otpStep.classList.remove('hidden');
+  otpHint.textContent=(channel==='whatsapp'?'OTP sent by WhatsApp to ':'OTP sent by SMS to ')+phone;
+  setTimeout(()=>applyLanguage(document),0);
+}
+async function verifyCustomerOTP(){
+  const token=(customerOtpCode.value||'').trim();
+  if(!/^\d{6}$/.test(token)){toast(currentLang==='ar'?'اكتب كود مكون من 6 أرقام':'Enter the 6-digit OTP');return}
+  const {data,error}=await spidDb.auth.verifyOtp({phone:pendingCustomerPhone,token,type:'sms'});
+  if(error||!data?.session){toast(currentLang==='ar'?'الكود غير صحيح أو انتهت صلاحيته':'Invalid or expired OTP');return}
+  const user=data.session.user;
+  const name=user.user_metadata?.full_name||customerAuthName.value.trim()||user.phone||'Customer';
+  session={role:'customer',name,phone:user.phone||pendingCustomerPhone,guest:false,authUserId:user.id};
+  localStorage.setItem('spidSession',JSON.stringify(session));
+  showWorkspace();toast(currentLang==='ar'?'تم تسجيل الدخول':'Signed in successfully');
+}
+function continueAsGuest(){
+  session={role:'customer',name:'Guest Customer',phone:'',guest:true};
+  localStorage.setItem('spidSession',JSON.stringify(session));
+  showWorkspace();
+}
 function togglePass(){loginPass.type=loginPass.type==='password'?'text':'password'}
 function signIn(){const r=roleInfo[selectedRole];if(loginUser.value.trim()===r.user&&loginPass.value===r.pass){finishLogin(selectedRole)}else toast('Incorrect demo credentials')}
 function demoLogin(){finishLogin(selectedRole)}
 function finishLogin(role){session={role,name:roleInfo[role].name};if(remember.checked)localStorage.setItem('spidSession',JSON.stringify(session));else localStorage.removeItem('spidSession');showWorkspace()}
-function logout(){session=null;localStorage.removeItem('spidSession');document.getElementById('appScreen').classList.add('hidden');document.getElementById('customerScreen').classList.add('hidden');document.getElementById('loginScreen').classList.remove('hidden');selectRole('owner')}
-function showWorkspace(){document.getElementById('loginScreen').classList.add('hidden');if(session.role==='customer'){document.getElementById('customerScreen').classList.remove('hidden');renderCustomerProducts();return}document.getElementById('appScreen').classList.remove('hidden');buildNav();userName.textContent=session.name;roleBadge.textContent=roleInfo[session.role].label;avatar.textContent=session.name.charAt(0);go(permissionPages[session.role][0][0])}
+async function logout(){if(session?.role==='customer'&&!session?.guest){try{await spidDb.auth.signOut()}catch(e){}}session=null;localStorage.removeItem('spidSession');document.getElementById('appScreen').classList.add('hidden');document.getElementById('customerScreen').classList.add('hidden');document.getElementById('loginScreen').classList.remove('hidden');selectRole('owner')}
+function showWorkspace(){document.getElementById('loginScreen').classList.add('hidden');if(session.role==='customer'){document.getElementById('customerScreen').classList.remove('hidden');document.getElementById('appScreen').classList.add('hidden');const badge=document.getElementById('customerAuthBadge');if(badge)badge.textContent=session.guest?'Guest':'✓ '+(session.name||'Customer');syncProductionCatalog().then(()=>renderCustomerProducts());return}document.getElementById('customerScreen').classList.add('hidden');document.getElementById('appScreen').classList.remove('hidden');buildNav();userName.textContent=session.name;roleBadge.textContent=roleInfo[session.role].label;avatar.textContent=session.name.charAt(0);go(permissionPages[session.role][0][0])}
 function buildNav(){nav.innerHTML=permissionPages[session.role].map(p=>'<button id="n-'+p[0]+'" onclick="go(\''+p[0]+'\')">'+p[1]+'</button>').join('')}
 function allowed(p){return session&&session.role!=='customer'&&permissionPages[session.role].some(x=>x[0]===p)}
 function go(p){if(!allowed(p)){content.innerHTML='<div class="card access"><h2>Access Restricted</h2><p class="muted">Your current role does not have permission to open this module.</p></div>';return}location.hash=p;document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('on'));const n=document.getElementById('n-'+p);if(n)n.classList.add('on');const f=window['page_'+p];content.innerHTML=f?f():'';pageTitle.textContent=(permissionPages[session.role].find(x=>x[0]===p)||['','Workspace'])[1].replace(/^[^A-Za-z₤]+/,'');pageSub.textContent=pageSubtext[p]||'SPID Mini Market ERP';side.classList.remove('open');if(p==='pos')setTimeout(drawCart,0)}
@@ -373,14 +448,16 @@ async function resetDemo(){
   localStorage.removeItem('spidSession');location.hash='';location.reload()
 }
 
+async function syncProductionCatalog(){try{const {data,error}=await spidDb.from('products').select('id,name_en,name_ar,category_en,category_ar,price,cost,stock,reorder_level,sku,barcode,image_url').eq('active',true).order('id');if(error||!data?.length)return;S.products=data.map(p=>({dbId:p.id,name:p.name_en,nameAr:p.name_ar,category:p.category_en,categoryAr:p.category_ar,price:+p.price,cost:+p.cost,stock:p.stock,reorder:p.reorder_level,sku:p.sku,barcode:p.barcode,img:p.image_url||pics[0]}));localStorage.setItem('spidERPv2',JSON.stringify(S));}catch(e){console.error('Catalog sync',e)}}
 function renderCustomerProducts(){const q=(customerSearch?.value||'').toLowerCase();const items=S.products.map((p,i)=>({p,i})).filter(x=>x.p.name.toLowerCase().includes(q)||x.p.category.toLowerCase().includes(q));customerProducts.innerHTML=items.map(x=>'<div class="card product"><img src="'+x.p.img+'"><div class="p"><b>'+esc(x.p.name)+'</b><div class="muted">'+esc(x.p.category)+'</div><div class="toolbar" style="margin:10px 0 0"><b>'+money(x.p.price)+'</b><button class="btn primary" onclick="customerAdd('+x.i+')">+ Add</button></div></div></div>').join('');updateCustomerBar()}
 function customerAdd(i){const x=customerCart.find(c=>c.i===i);if(x)x.q++;else customerCart.push({i,q:1});updateCustomerBar();toast(S.products[i].name+' added')}
 function updateCustomerBar(){const count=customerCart.reduce((a,c)=>a+c.q,0),total=customerCart.reduce((a,c)=>a+S.products[c.i].price*c.q,0);customerCartCount.textContent=count+' item'+(count===1?'':'s');customerCartTotal.textContent=money(total*1.14)}
-function customerCheckout(){if(!customerCart.length){toast('Your cart is empty');return}const total=customerCart.reduce((a,c)=>a+S.products[c.i].price*c.q,0)*1.14;customerCart.forEach(c=>S.products[c.i].stock=Math.max(0,S.products[c.i].stock-c.q));const id='QR-'+(300+S.orders.length);S.orders.unshift({id,channel:'Customer QR',total:Math.round(total),status:'Preparing',time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});S.audit.unshift({time:new Date().toLocaleString('en-GB'),user:'Demo Customer',role:'Customer',module:'Orders',action:'Placed '+id});customerCart=[];save();updateCustomerBar();openModal('Order Placed','<div style="text-align:center;padding:10px"><div style="font-size:42px">✓</div><h3>'+id+'</h3><p>Your order is now <b>Preparing</b>.</p><p class="muted">The order is visible to the store team in the unified Orders queue.</p></div>','info')}
+function customerCheckout(){if(!customerCart.length){toast('Your cart is empty');return}const defaultName=session?.guest?'':(session?.name||'');const defaultPhone=session?.phone||'';openModal('Customer & Order Details','<div class="formgrid"><div class="field"><label>Customer Name</label><input id="f1" class="input" value="'+esc(defaultName)+'" placeholder="Your name"></div><div class="field"><label>Mobile Number</label><input id="f2" class="input ltr" inputmode="tel" value="'+esc(defaultPhone)+'" placeholder="01xxxxxxxxx"></div><div class="field"><label>Payment Method</label><select id="f3" class="input"><option value="cash">Cash at counter</option><option value="online">Online Payment (coming next)</option></select></div></div><p class="muted">Guest checkout is allowed. Your order will appear live for the cashier.</p>','customerCheckout')}
+async function placeCustomerOrder(){const name=(f1.value||'').trim()||(session?.name||'Walk-in Customer');const phoneRaw=(f2.value||'').trim();const phone=phoneRaw?normalizeEgyptPhone(phoneRaw):'';if(phoneRaw&&!validEgyptMobile(phone)){toast(currentLang==='ar'?'رقم الموبايل غير صحيح':'Invalid mobile number');return}const method=f3.value||'cash';const items=customerCart.map(c=>({product_id:S.products[c.i].dbId||null,sku:S.products[c.i].sku,qty:c.q}));const {data,error}=await spidDb.rpc('place_customer_order',{p_customer_name:name,p_customer_phone:phone||null,p_items:items,p_payment_method:method,p_notes:session?.guest?'Guest checkout':'Authenticated customer'});if(error){console.error(error);toast((currentLang==='ar'?'تعذر إنشاء الطلب: ':'Could not place order: ')+error.message);return}const total=Number(data.total||0),orderNo=data.order_no;customerCart.forEach(x=>{S.products[x.i].stock=Math.max(0,S.products[x.i].stock-x.q)});S.orders.unshift({id:orderNo,channel:'Customer QR',total:Math.round(total),status:'Preparing',time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),dbId:data.order_id,customer:name,phone});S.audit.unshift({time:new Date().toLocaleString('en-GB'),user:name,role:'Customer',module:'Orders',action:'Placed '+orderNo});customerCart=[];save();updateCustomerBar();closeModal();openModal('Order Placed','<div style="text-align:center;padding:10px"><div style="font-size:42px">✓</div><h3>'+esc(orderNo)+'</h3><p>Your order is now <b>Preparing</b>.</p><p class="muted">The order is saved in the live database and is visible to the cashier.</p></div>','info')}
 
 function openModal(title,body,mode){modalMode=mode;modalRoot.innerHTML='<div class="modalback" onclick="if(event.target===this)closeModal()"><div class="modal"><h3>'+title+'</h3>'+body+'<div class="modalfoot">'+(mode==='info'?'<button class="btn primary" onclick="closeModal()">Done</button>':'<button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="submitModal()">Save / Confirm</button>')+'</div></div></div>'}
 function closeModal(){stopQRScanner();modalRoot.innerHTML=''}
-function submitModal(){if(modalMode==='product')return saveProduct();if(modalMode==='stock')return saveStock();if(modalMode==='staff')return saveStaff();if(modalMode==='expense')return saveExpense();if(modalMode==='supplier')return saveSupplier();if(modalMode==='user')return saveUser();if(modalMode==='checkout')return completeCheckout();if(modalMode==='barcode'){const i=S.products.findIndex(p=>p.barcode===f1.value);if(i>=0){addCart(i);closeModal();toast('Barcode recognized: '+S.products[i].name)}else toast('Barcode not found');return}if(modalMode==='closeShift'){audit('Approved shift close · actual cash '+money(+f1.value||0),'Accounting');save();closeModal();toast('Shift closed and logged')}}
+function submitModal(){if(modalMode==='product')return saveProduct();if(modalMode==='stock')return saveStock();if(modalMode==='staff')return saveStaff();if(modalMode==='expense')return saveExpense();if(modalMode==='supplier')return saveSupplier();if(modalMode==='user')return saveUser();if(modalMode==='checkout')return completeCheckout();if(modalMode==='customerCheckout')return placeCustomerOrder();if(modalMode==='barcode'){const i=S.products.findIndex(p=>p.barcode===f1.value);if(i>=0){addCart(i);closeModal();toast('Barcode recognized: '+S.products[i].name)}else toast('Barcode not found');return}if(modalMode==='closeShift'){audit('Approved shift close · actual cash '+money(+f1.value||0),'Accounting');save();closeModal();toast('Shift closed and logged')}}
 function askDelete(type,i,label){modalMode='delete:'+type;modalIndex=i;modalRoot.innerHTML='<div class="modalback"><div class="modal"><h3>Confirm deletion</h3><p>Delete <b>'+label+'</b>?</p><p class="muted">This demo action will be recorded in the audit log.</p><div class="modalfoot"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn danger" onclick="doDelete()">Delete</button></div></div></div>'}
 function doDelete(){const type=modalMode.split(':')[1];let label='';if(type==='product'){label=S.products[modalIndex].name;S.products.splice(modalIndex,1);audit('Deleted product '+label,'Inventory')}if(type==='staff'){label=S.staff[modalIndex].name;S.staff.splice(modalIndex,1);audit('Deleted employee '+label,'HR')}if(type==='expense'){label=S.expenses[modalIndex].name;S.expenses.splice(modalIndex,1);audit('Deleted expense '+label,'Accounting')}if(type==='supplier'){label=S.suppliers[modalIndex].name;S.suppliers.splice(modalIndex,1);audit('Deleted supplier '+label,'Suppliers')}if(type==='user'){label=S.users[modalIndex].name;S.users.splice(modalIndex,1);audit('Deleted user '+label,'Users & Roles')}save();closeModal();const map={product:'inventory',staff:'staff',expense:'accounting',supplier:'suppliers',user:'users'};go(map[type]);toast(label+' deleted')}
 
@@ -414,7 +491,7 @@ const AR={
 'Invoice':'فاتورة','Cashier':'الكاشير','Mobile':'الموبايل','Tax ID':'الرقم الضريبي','Payment':'طريقة الدفع','Item':'الصنف','Qty':'الكمية','Thank you for shopping with us.':'شكرًا لزيارتكم.','Invoice History':'سجل الفواتير','Recent cashier receipts':'أحدث فواتير الكاشير','View / Reprint':'عرض / إعادة طباعة',
 'Product QR Scanner':'ماسح QR للمنتجات','Point the camera at a SPID product QR code.':'وجّه الكاميرا إلى QR الخاص بالمنتج.','Starting camera…':'جاري تشغيل الكاميرا…','Manual QR fallback':'إدخال QR يدويًا','Barcode Scan':'مسح الباركود','Expense':'المصروف','Amount':'المبلغ','Actual Cash':'النقدية الفعلية','Done':'تم','Save / Confirm':'حفظ / تأكيد','Confirm deletion':'تأكيد الحذف',
 'Cappuccino':'كابتشينو','Turkey Sandwich':'ساندوتش تركي','Mineral Water':'مياه معدنية','Orange Juice':'عصير برتقال','Potato Chips':'شيبسي','Dark Chocolate':'شوكولاتة دارك','Fresh Milk':'لبن طازج','Butter Croissant':'كرواسون بالزبدة','Coffee':'قهوة','Fresh Food':'أطعمة طازجة','Drinks':'مشروبات','Snacks':'سناكس','Dairy':'ألبان','Bakery':'مخبوزات',
-'On shift':'في الشيفت','Break':'استراحة','Off':'إجازة','Scheduled':'مجدول','Barista':'باريستا','Storekeeper':'أمين مخزن','Supervisor':'مشرف','Delivery':'توصيل','Active':'نشط','Inactive':'غير نشط'
+'On shift':'في الشيفت','Break':'استراحة','Off':'إجازة','Scheduled':'مجدول','Barista':'باريستا','Storekeeper':'أمين مخزن','Supervisor':'مشرف','Delivery':'توصيل','Active':'نشط','Inactive':'غير نشط','Customer Login':'دخول العميل','Use your mobile number. No email required.':'استخدم رقم الموبايل فقط. لا تحتاج بريد إلكتروني.','Your name':'اسمك','OTP Channel':'طريقة إرسال الكود','Send OTP':'إرسال الكود','Continue as Guest':'المتابعة كضيف','6-digit OTP':'كود التحقق 6 أرقام','Verify & Continue':'تأكيد ومتابعة','Change Number':'تغيير الرقم','Guest checkout is available without creating an account.':'يمكنك الطلب كضيف بدون إنشاء حساب.','Guest':'ضيف','Customer & Order Details':'بيانات العميل والطلب','Cash at counter':'الدفع نقدًا عند الكاشير','Online Payment (coming next)':'دفع أونلاين (سيتم ربطه لاحقًا)','Guest checkout is allowed. Your order will appear live for the cashier.':'يمكن الطلب كضيف، وسيظهر الطلب مباشرة عند الكاشير.','The order is saved in the live database and is visible to the cashier.':'تم حفظ الطلب في قاعدة البيانات وسيظهر مباشرة عند الكاشير.'
 };
 const AR_KEYS=Object.keys(AR).sort((a,b)=>b.length-a.length);
 const originalText=new WeakMap();
