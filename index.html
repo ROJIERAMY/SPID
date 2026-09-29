@@ -89,6 +89,7 @@ html[dir="rtl"] .receipt{direction:rtl;text-align:right}
 
 <div id="modalRoot"></div><div id="toast" class="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const pics=[
 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=500&q=80',
@@ -128,6 +129,64 @@ countHistory:[{type:'Daily',date:'27 Sep 2026',variance:-215,status:'Closed'},{t
 audit:[{time:'Today 11:58',user:'Ramy Owner',role:'Owner',module:'Inventory',action:'Reviewed low-stock alerts'},{time:'Today 11:43',user:'Mariam Cashier',role:'Cashier',module:'Orders',action:'Completed order ORD-1045'}]
 };
 let S=JSON.parse(localStorage.getItem('spidERPv2')||'null')||structuredClone(seed);if(!S.invoices)S.invoices=[];
+const SUPABASE_URL='https://dsfncxkhqxrizpsshhhz.supabase.co';
+const SUPABASE_KEY='sb_publishable_NSjmKwe7munU9Qx15XXnig_DW1gTiXb';
+const spidDb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let remoteReady=false,applyingRemote=false,remoteSaveTimer=null;
+function refreshSharedUI(){
+  if(!session)return;
+  if(session.role==='customer'&&!customerScreen.classList.contains('hidden')){
+    renderCustomerProducts();
+    return;
+  }
+  if(!appScreen.classList.contains('hidden')){
+    const p=(location.hash||'').replace('#','')||permissionPages[session.role][0][0];
+    if(allowed(p))go(p);
+  }
+}
+async function initRemoteState(){
+  try{
+    const {data,error}=await spidDb.from('erp_state').select('payload,updated_at').eq('id',1).maybeSingle();
+    if(error)throw error;
+    if(data&&data.payload&&Object.keys(data.payload).length){
+      applyingRemote=true;
+      S=data.payload;
+      if(!S.invoices)S.invoices=[];
+      localStorage.setItem('spidERPv2',JSON.stringify(S));
+      applyingRemote=false;
+      refreshSharedUI();
+    }else{
+      const {error:seedError}=await spidDb.from('erp_state').upsert({id:1,payload:S,updated_at:new Date().toISOString()},{onConflict:'id'});
+      if(seedError)throw seedError;
+    }
+    remoteReady=true;
+    spidDb.channel('spid-erp-live')
+      .on('postgres_changes',{event:'UPDATE',schema:'public',table:'erp_state',filter:'id=eq.1'},payload=>{
+        if(!payload.new||!payload.new.payload)return;
+        applyingRemote=true;
+        S=payload.new.payload;
+        if(!S.invoices)S.invoices=[];
+        localStorage.setItem('spidERPv2',JSON.stringify(S));
+        applyingRemote=false;
+        refreshSharedUI();
+        if(session)toast(currentLang==='ar'?'تم تحديث البيانات من جهاز آخر':'Live data updated from another device');
+      })
+      .subscribe();
+  }catch(err){
+    console.error('Supabase sync error',err);
+    remoteReady=false;
+  }
+}
+function queueRemoteSave(){
+  if(!remoteReady||applyingRemote)return;
+  clearTimeout(remoteSaveTimer);
+  remoteSaveTimer=setTimeout(async()=>{
+    const snapshot=JSON.parse(JSON.stringify(S));
+    const {error}=await spidDb.from('erp_state').update({payload:snapshot,updated_at:new Date().toISOString()}).eq('id',1);
+    if(error)console.error('Supabase save error',error);
+  },120);
+}
+
 let session=JSON.parse(localStorage.getItem('spidSession')||'null');
 let selectedRole='owner',cart=[],customerCart=[],currentCount=null,modalMode='',modalIndex=-1,reportPeriod='daily';
 const roleInfo={
@@ -141,7 +200,7 @@ owner:[['dash','◈ Dashboard'],['pos','▣ POS & Checkout'],['orders','◫ Orde
 cashier:[['cashdash','◈ My Shift'],['pos','▣ POS & Checkout'],['orders','◫ Orders'],['shift','₤ Cash Drawer']],
 hr:[['hrdash','◈ HR Dashboard'],['staff','♟ Staff Directory'],['payroll','₤ Payroll']]
 };
-function save(){localStorage.setItem('spidERPv2',JSON.stringify(S))}
+function save(){localStorage.setItem('spidERPv2',JSON.stringify(S));queueRemoteSave()}
 function money(n){return new Intl.NumberFormat('en-EG',{style:'currency',currency:'EGP',maximumFractionDigits:0}).format(n||0)}
 function toast(t){const x=document.getElementById('toast');x.textContent=t;x.classList.add('show');setTimeout(()=>x.classList.remove('show'),2200)}
 function audit(action,module){if(!session)return;S.audit.unshift({time:new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}),user:session.name,role:roleInfo[session.role].label,module,action});save()}
@@ -304,7 +363,15 @@ function userForm(){openModal('Add System User','<div class="field"><label>Name<
 function saveUser(){S.users.push({name:f1.value||'New User',email:f2.value||'user@spid.demo',role:f3.value,active:true});audit('Created user '+f1.value+' with role '+f3.value,'Users & Roles');save();closeModal();go('users')}
 function page_audit(){return '<div class="card"><div class="toolbar"><div><b>Audit Log</b><div class="muted">Owner-only trace of important system actions.</div></div><span class="pill">Managerial Control</span></div><div class="tablewrap"><table class="table"><tr><th>Time</th><th>User</th><th>Role</th><th>Module</th><th>Action</th></tr>'+S.audit.map(a=>'<tr><td>'+esc(a.time)+'</td><td><b>'+esc(a.user)+'</b></td><td>'+esc(a.role)+'</td><td>'+esc(a.module)+'</td><td>'+esc(a.action)+'</td></tr>').join('')+'</table></div></div>'}
 function page_settings(){return '<div class="grid two"><div class="card"><b>Store Profile</b><div class="line"><span>Store</span><b>SPID Mini Market Demo</b></div><div class="line"><span>Branch</span><b>Cairo Demo Branch</b></div><div class="line"><span>Currency</span><b>EGP</b></div><div class="line"><span>VAT</span><b>14%</b></div><div class="line"><span>Developer</span><b>SPID Systems</b></div></div><div class="card"><b>Demo Mode — Local Data</b><p class="muted">This prototype stores demo changes in this browser. Production will connect all devices to a shared backend/database.</p><button class="btn danger" onclick="resetDemo()">Reset Demo Data</button></div></div>'}
-function resetDemo(){localStorage.removeItem('spidERPv2');localStorage.removeItem('spidSession');location.hash='';location.reload()}
+async function resetDemo(){
+  const fresh=structuredClone(seed);fresh.invoices=[];
+  S=fresh;
+  localStorage.setItem('spidERPv2',JSON.stringify(S));
+  if(remoteReady){
+    await spidDb.from('erp_state').update({payload:S,updated_at:new Date().toISOString()}).eq('id',1);
+  }
+  localStorage.removeItem('spidSession');location.hash='';location.reload()
+}
 
 function renderCustomerProducts(){const q=(customerSearch?.value||'').toLowerCase();const items=S.products.map((p,i)=>({p,i})).filter(x=>x.p.name.toLowerCase().includes(q)||x.p.category.toLowerCase().includes(q));customerProducts.innerHTML=items.map(x=>'<div class="card product"><img src="'+x.p.img+'"><div class="p"><b>'+esc(x.p.name)+'</b><div class="muted">'+esc(x.p.category)+'</div><div class="toolbar" style="margin:10px 0 0"><b>'+money(x.p.price)+'</b><button class="btn primary" onclick="customerAdd('+x.i+')">+ Add</button></div></div></div>').join('');updateCustomerBar()}
 function customerAdd(i){const x=customerCart.find(c=>c.i===i);if(x)x.q++;else customerCart.push({i,q:1});updateCustomerBar();toast(S.products[i].name+' added')}
@@ -401,6 +468,7 @@ const _askDelete=askDelete; askDelete=function(t,i,l){_askDelete(t,i,l);setTimeo
 const _renderCustomerProducts=renderCustomerProducts; renderCustomerProducts=function(){_renderCustomerProducts();setTimeout(()=>applyLanguage(document),0)};
 const _toast=toast; toast=function(t){_toast(currentLang==='ar'?translateString(t):t)};
 
+initRemoteState();
 setTimeout(()=>{applyLanguage(document);splash.classList.add('hidden');if(session){showWorkspace()}else{loginScreen.classList.remove('hidden');selectRole('owner')}setTimeout(()=>applyLanguage(document),20)},1900);
 </script>
 </body>
