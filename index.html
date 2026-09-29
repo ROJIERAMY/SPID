@@ -297,7 +297,53 @@ function allowed(p){return session&&session.role!=='customer'&&permissionPages[s
 function go(p){if(!allowed(p)){content.innerHTML='<div class="card access"><h2>Access Restricted</h2><p class="muted">Your current role does not have permission to open this module.</p></div>';return}location.hash=p;document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('on'));const n=document.getElementById('n-'+p);if(n)n.classList.add('on');const f=window['page_'+p];content.innerHTML=f?f():'';pageTitle.textContent=(permissionPages[session.role].find(x=>x[0]===p)||['','Workspace'])[1].replace(/^[^A-Za-z₤]+/,'');pageSub.textContent=pageSubtext[p]||'SPID Mini Market ERP';side.classList.remove('open');if(p==='pos')setTimeout(drawCart,0)}
 const pageSubtext={dash:'Full business control center',cashdash:'Cashier operations and shift snapshot',hrdash:'People operations snapshot',pos:'Fast checkout and live stock deduction',orders:'POS and customer orders in one queue',inventory:'Products, pricing and stock control',counts:'Daily and weekly physical inventory',staff:'Employees, attendance and shifts',accounting:'Sales, COGS, expenses and cash',suppliers:'Supplier and purchasing control',reports:'Business performance analytics',users:'Access management and role assignments',audit:'System activity history',settings:'Store and demo configuration',shift:'Your current cash drawer only',payroll:'HR payroll workspace'};
 
-function ordersTable(canChange=true){return '<div class="tablewrap"><table class="table"><tr><th>Order</th><th>Channel</th><th>Time</th><th>Total</th><th>Status</th></tr>'+S.orders.map((o,i)=>'<tr><td><b>'+o.id+'</b></td><td>'+o.channel+'</td><td>'+o.time+'</td><td>'+money(o.total)+'</td><td>'+(canChange?'<button class="btn" onclick="cycleOrder('+i+')">'+o.status+'</button>':'<span class="status">'+o.status+'</span>')+'</td></tr>').join('')+'</table></div>'}
+function ordersTable(canChange=true){
+  return '<div class="tablewrap"><table class="table"><tr><th>Order</th><th>Channel</th><th>Customer</th><th>Time</th><th>Total</th><th>Status</th></tr>'+
+    S.orders.map((o,i)=>'<tr style="cursor:pointer" onclick="showOrderDetails('+i+')" title="Open order details">'+
+      '<td><b>'+esc(o.id)+'</b><div class="muted">View details</div></td>'+
+      '<td>'+esc(o.channel||'—')+'</td>'+
+      '<td>'+esc(o.customer||o.customerName||'Walk-in Customer')+'</td>'+
+      '<td>'+esc(o.time||'—')+'</td>'+
+      '<td>'+money(o.total)+'</td>'+
+      '<td>'+(canChange?'<button class="btn" onclick="event.stopPropagation();cycleOrder('+i+')">'+esc(o.status||'Preparing')+'</button>':'<span class="status">'+esc(o.status||'Preparing')+'</span>')+'</td>'+
+    '</tr>').join('')+'</table></div>'
+}
+function orderItemsHtml(o){
+  const items=Array.isArray(o.items)?o.items:[];
+  if(!items.length)return '<div class="notice"><b>Items unavailable</b><div class="muted">This is an older/demo order that was created before detailed order syncing was enabled.</div></div>';
+  return '<div class="tablewrap"><table class="table"><tr><th>Item</th><th>SKU</th><th>Qty</th><th>Unit</th><th>Total</th></tr>'+
+    items.map(x=>'<tr><td><b>'+esc(x.name||x.product_name||'Product')+'</b></td><td>'+esc(x.sku||'—')+'</td><td>'+Number(x.qty||1)+'</td><td>'+money(Number(x.unitPrice??x.unit_price??0))+'</td><td>'+money(Number(x.lineTotal??x.line_total??((x.unitPrice??x.unit_price??0)*(x.qty||1))))+'</td></tr>').join('')+
+    '</table></div>'
+}
+function showOrderDetails(i){
+  const o=S.orders[i];if(!o)return;
+  const subtotal=Number(o.subtotal??((Number(o.total||0))/1.14));
+  const vat=Number(o.vat??(Number(o.total||0)-subtotal));
+  const body=
+    '<div class="grid two">'+
+      '<div class="card"><b>Order Information</b>'+
+        '<div class="line"><span>Order</span><b>'+esc(o.id)+'</b></div>'+
+        '<div class="line"><span>Channel</span><b>'+esc(o.channel||'—')+'</b></div>'+
+        '<div class="line"><span>Status</span><b>'+esc(o.status||'Preparing')+'</b></div>'+
+        '<div class="line"><span>Date / Time</span><b>'+esc(o.dateTime||o.time||'—')+'</b></div>'+
+        '<div class="line"><span>Payment</span><b>'+esc(o.paymentMethod||o.payment_method||'Cash')+'</b></div>'+
+        '<div class="line"><span>Payment Status</span><b>'+esc(o.paymentStatus||o.payment_status||'Pending')+'</b></div>'+
+      '</div>'+
+      '<div class="card"><b>Customer</b>'+
+        '<div class="line"><span>Name</span><b>'+esc(o.customer||o.customerName||'Walk-in Customer')+'</b></div>'+
+        '<div class="line"><span>Phone</span><b>'+esc(o.phone||'—')+'</b></div>'+
+        '<div class="line"><span>Email</span><b>'+esc(o.email||'—')+'</b></div>'+
+        (o.notes?'<div class="line"><span>Notes</span><b>'+esc(o.notes)+'</b></div>':'')+
+      '</div>'+
+    '</div>'+
+    '<div style="margin-top:14px"><b>Order Items</b>'+orderItemsHtml(o)+'</div>'+
+    '<div class="card" style="margin-top:14px">'+
+      '<div class="line"><span>Subtotal</span><b>'+money(subtotal)+'</b></div>'+
+      '<div class="line"><span>VAT 14%</span><b>'+money(vat)+'</b></div>'+
+      '<div class="line"><span>Total</span><b>'+money(Number(o.total||0))+'</b></div>'+
+    '</div>';
+  openModal('Order '+esc(o.id),body,'info');
+}
 function cycleOrder(i){const a=['Preparing','Ready','Completed'];S.orders[i].status=a[(a.indexOf(S.orders[i].status)+1)%a.length];audit('Changed '+S.orders[i].id+' to '+S.orders[i].status,'Orders');save();go('orders')}
 function page_dash(){const sales=15170+S.orders.reduce((a,o)=>a+o.total,0),stock=S.products.reduce((a,p)=>a+p.cost*p.stock,0),low=S.products.filter(p=>p.stock<=p.reorder).length;return '<div class="notice"><b>Owner / Super Admin</b> — complete control of the ERP, approvals, users and business data.</div><div class="grid kpis"><div class="card kpi"><span class="muted">Today Sales</span><b>'+money(sales)+'</b><span class="green">↑ 12.4%</span></div><div class="card kpi"><span class="muted">Gross Profit</span><b>'+money(sales*.51)+'</b><span>51% margin</span></div><div class="card kpi"><span class="muted">Inventory Value</span><b>'+money(stock)+'</b><span>'+S.products.length+' SKUs</span></div><div class="card kpi"><span class="muted">Orders</span><b>'+(S.orders.length+73)+'</b><span>POS + Customer</span></div><div class="card kpi"><span class="muted">Low Stock</span><b class="red">'+low+'</b><span>Needs action</span></div></div><div class="grid two" style="margin-top:14px"><div class="card"><div class="toolbar"><b>Live Order Queue</b><button class="btn" onclick="go(\'orders\')">Open Orders</button></div>'+ordersTable(false)+'</div><div class="card"><b>Control Center</b><div class="line"><span>Staff on shift</span><b>'+S.staff.filter(x=>x.status==='On shift').length+'</b></div><div class="line"><span>Cash variance</span><b class="green">EGP 0</b></div><div class="line"><span>Pending approvals</span><b class="warn">3</b></div><div class="line"><span>Customer / QR adoption</span><b>28%</b></div></div></div>'}
 function page_cashdash(){return '<div class="notice"><b>Cashier workspace:</b> POS, current orders and your own shift only. HR, suppliers and company financials are hidden.</div><div class="grid three"><div class="card kpi"><span class="muted">My Sales</span><b>'+money(6930)+'</b></div><div class="card kpi"><span class="muted">Orders Served</span><b>31</b></div><div class="card kpi"><span class="muted">Drawer Status</span><b class="green">Balanced</b></div></div><div class="card" style="margin-top:14px"><div class="toolbar"><b>Orders Needing Action</b><button class="btn primary" onclick="go(\'pos\')">Open POS</button></div>'+ordersTable(true)+'</div>'}
@@ -344,7 +390,7 @@ function showInvoices(){if(!S.invoices.length){toast('No invoices yet');return}m
 function printInvoice(i){const inv=S.invoices[i];if(!inv)return;const w=window.open('','_blank','width=520,height=760');if(!w){toast('Allow pop-ups to print invoice');return}w.document.write('<!doctype html><html><head><title>'+inv.invoiceNo+'</title><style>body{font-family:Arial,sans-serif;margin:0;padding:18px;color:#111}.receipt{max-width:360px;margin:auto}.brand{text-align:center;border-bottom:2px dashed #bbb;padding-bottom:12px}.logo{width:58px;height:58px;border-radius:17px;background:#8b0000;color:white;display:grid;place-items:center;margin:auto;font-weight:900}.meta{font-size:12px;line-height:1.7;margin-top:12px}.row{display:grid;grid-template-columns:1fr 50px 72px;gap:6px;padding:7px 0;border-bottom:1px dashed #ccc;font-size:11px}.totals{margin-top:10px}.totals div{display:flex;justify-content:space-between;padding:4px 0}.grand{font-size:18px;font-weight:bold;border-top:2px solid #111;padding-top:8px!important;margin-top:5px}.foot{text-align:center;border-top:1px dashed #bbb;margin-top:12px;padding-top:10px;font-size:10px;color:#666}@page{size:80mm auto;margin:6mm}</style></head><body><div class="receipt"><div class="brand"><img src="https://raw.githubusercontent.com/ROJIERAMY/SPID/main/demos/mini-market-erp/assets/spid-coffee-logo.webp" style="width:74px;height:74px;object-fit:contain;display:block;margin:auto"><h2 style="margin:8px 0 2px">SPID Mini Market</h2><small>SPID Systems — Speed. Security. Systems.</small><br><small>Cairo Demo Branch · VAT 14%</small></div><div class="meta"><b>Invoice:</b> '+inv.invoiceNo+'<br><b>Order:</b> '+inv.orderId+'<br><b>Date:</b> '+inv.date+' · '+inv.time+'<br><b>Cashier:</b> '+inv.cashier+'<br><b>Customer:</b> '+inv.customer.name+(inv.customer.phone?'<br><b>Mobile:</b> '+inv.customer.phone:'')+(inv.customer.taxId?'<br><b>Tax ID:</b> '+inv.customer.taxId:'')+'<br><b>Payment:</b> '+inv.payment+'</div><div style="display:grid;grid-template-columns:1fr 50px 72px;gap:6px;font-size:11px;font-weight:bold;margin-top:12px"><span>Item</span><span>Qty</span><span style="text-align:right">Total</span></div>'+inv.items.map(x=>'<div class="row"><span>'+x.name+'<small style="display:block;color:#777">'+x.sku+'</small></span><span>'+x.qty+' × '+money(x.unit)+'</span><span style="text-align:right">'+money(x.total)+'</span></div>').join('')+'<div class="totals"><div><span>Subtotal</span><b>'+money(inv.subtotal)+'</b></div><div><span>VAT 14%</span><b>'+money(inv.vat)+'</b></div><div class="grand"><span>Total</span><span>'+money(inv.total)+'</span></div></div><div class="foot">Thank you for shopping with us.<br>Powered by SPID Systems</div></div><script>window.onload=()=>setTimeout(()=>window.print(),250)<\/script></body></html>');w.document.close();audit('Printed / exported '+inv.invoiceNo,'POS / Invoices')}
 
 function page_orders(){return '<div class="toolbar"><div><b>Unified Orders</b><div class="muted">POS and customer orders in one queue.</div></div><button class="btn blue" onclick="simulateCustomerOrder()">+ Simulate Customer Order</button></div><div class="card">'+ordersTable(true)+'</div>'}
-function simulateCustomerOrder(){const id='QR-'+(220+S.orders.length);S.orders.unshift({id,channel:'Customer QR',total:165,status:'Preparing',time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});audit('Received customer order '+id,'Orders');save();go('orders')}
+function simulateCustomerOrder(){const id='QR-'+(220+S.orders.length);const items=[{name:'Cappuccino',sku:'COF-001',qty:1,unitPrice:75,lineTotal:75},{name:'Butter Croissant',sku:'BAK-006',qty:1,unitPrice:60,lineTotal:60}];const subtotal=135,vat=18.9,total=153.9;S.orders.unshift({id,channel:'Customer QR',customer:'Demo Customer',phone:'01000000000',email:'demo@example.com',items,subtotal,vat,total,paymentMethod:'cash',paymentStatus:'pending',status:'Preparing',time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),dateTime:new Date().toLocaleString()});audit('Received customer order '+id,'Orders');save();go('orders')}
 
 function page_inventory(){const value=S.products.reduce((a,p)=>a+p.cost*p.stock,0);return '<div class="toolbar"><div><b>Inventory Control</b><div class="muted">Add, edit, delete and adjust products.</div></div><button class="btn primary" onclick="productForm(-1)">+ Add Product</button></div><div class="grid three"><div class="card kpi"><span class="muted">Stock at Cost</span><b>'+money(value)+'</b></div><div class="card kpi"><span class="muted">Low Stock</span><b class="red">'+S.products.filter(p=>p.stock<=p.reorder).length+'</b></div><div class="card kpi"><span class="muted">Active SKUs</span><b>'+S.products.length+'</b></div></div><div class="card" style="margin-top:14px"><div class="tablewrap"><table class="table"><tr><th>Product</th><th>SKU</th><th>Cost</th><th>Sell</th><th>Stock</th><th>Reorder</th><th>Actions</th></tr>'+S.products.map((p,i)=>'<tr><td><b>'+esc(p.name)+'</b><div class="muted">'+esc(p.category)+'</div></td><td>'+p.sku+'</td><td>'+money(p.cost)+'</td><td>'+money(p.price)+'</td><td class="'+(p.stock<=p.reorder?'red':'green')+'"><b>'+p.stock+'</b></td><td>'+p.reorder+'</td><td><div class="actions"><button class="btn" onclick="productForm('+i+')">Edit</button><button class="btn blue" onclick="adjustStock('+i+')">Adjust</button><button class="btn danger" onclick="askDelete(\'product\','+i+',\''+esc(p.name).replace(/'/g,"&#39;")+'\')">Delete</button></div></td></tr>').join('')+'</table></div></div>'}
 function productForm(i){modalIndex=i;const p=i>=0?S.products[i]:{name:'',category:'Drinks',price:0,cost:0,stock:0,reorder:10,sku:'SKU-'+Date.now().toString().slice(-5),barcode:'',img:pics[2]};openModal(i>=0?'Edit Product':'Add Product','<div class="formgrid"><div class="field"><label>Name</label><input id="f1" class="input" value="'+esc(p.name)+'"></div><div class="field"><label>Category</label><input id="f2" class="input" value="'+esc(p.category)+'"></div><div class="field"><label>Selling Price</label><input id="f3" type="number" class="input" value="'+p.price+'"></div><div class="field"><label>Cost</label><input id="f4" type="number" class="input" value="'+p.cost+'"></div><div class="field"><label>Stock Qty</label><input id="f5" type="number" class="input" value="'+p.stock+'"></div><div class="field"><label>Reorder Point</label><input id="f6" type="number" class="input" value="'+p.reorder+'"></div><div class="field"><label>SKU</label><input id="f7" class="input" value="'+p.sku+'"></div><div class="field"><label>Barcode</label><input id="f8" class="input" value="'+p.barcode+'"></div></div>','product')}
@@ -456,7 +502,58 @@ function renderCustomerProducts(){const q=(customerSearch?.value||'').toLowerCas
 function customerAdd(i){const x=customerCart.find(c=>c.i===i);if(x)x.q++;else customerCart.push({i,q:1});updateCustomerBar();toast(S.products[i].name+' added')}
 function updateCustomerBar(){const count=customerCart.reduce((a,c)=>a+c.q,0),total=customerCart.reduce((a,c)=>a+S.products[c.i].price*c.q,0);customerCartCount.textContent=count+' item'+(count===1?'':'s');customerCartTotal.textContent=money(total*1.14)}
 function customerCheckout(){if(!customerCart.length){toast('Your cart is empty');return}const defaultName=session?.guest?'':(session?.name||'');const defaultPhone=session?.phone||'';openModal('Customer & Order Details','<div class="formgrid"><div class="field"><label>Customer Name</label><input id="f1" class="input" value="'+esc(defaultName)+'" placeholder="Your name"></div><div class="field"><label>Mobile Number</label><input id="f2" class="input ltr" inputmode="tel" value="'+esc(defaultPhone)+'" placeholder="01xxxxxxxxx"></div><div class="field"><label>Payment Method</label><select id="f3" class="input"><option value="cash">Cash at counter</option><option value="online">Online Payment (coming next)</option></select></div></div><p class="muted">Guest checkout is allowed. Your order will appear live for the cashier.</p>','customerCheckout')}
-async function placeCustomerOrder(){const name=(f1.value||'').trim()||(session?.name||'Walk-in Customer');const phoneRaw=(f2.value||'').trim();const phone=phoneRaw?normalizeEgyptPhone(phoneRaw):'';if(phoneRaw&&!validEgyptMobile(phone)){toast(currentLang==='ar'?'رقم الموبايل غير صحيح':'Invalid mobile number');return}const method=f3.value||'cash';const items=customerCart.map(c=>({product_id:S.products[c.i].dbId||null,sku:S.products[c.i].sku,qty:c.q}));const {data,error}=await spidDb.rpc('place_customer_order',{p_customer_name:name,p_customer_phone:phone||null,p_items:items,p_payment_method:method,p_notes:session?.guest?'Guest checkout':'Authenticated customer'});if(error){console.error(error);toast((currentLang==='ar'?'تعذر إنشاء الطلب: ':'Could not place order: ')+error.message);return}const total=Number(data.total||0),orderNo=data.order_no;customerCart.forEach(x=>{S.products[x.i].stock=Math.max(0,S.products[x.i].stock-x.q)});S.orders.unshift({id:orderNo,channel:'Customer QR',total:Math.round(total),status:'Preparing',time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),dbId:data.order_id,customer:name,phone});S.audit.unshift({time:new Date().toLocaleString('en-GB'),user:name,role:'Customer',module:'Orders',action:'Placed '+orderNo});customerCart=[];save();updateCustomerBar();closeModal();openModal('Order Placed','<div style="text-align:center;padding:10px"><div style="font-size:42px">✓</div><h3>'+esc(orderNo)+'</h3><p>Your order is now <b>Preparing</b>.</p><p class="muted">The order is saved in the live database and is visible to the cashier.</p></div>','info')}
+async function placeCustomerOrder(){
+  const name=(f1.value||'').trim()||(session?.name||'Walk-in Customer');
+  const phoneRaw=(f2.value||'').trim();
+  const phone=phoneRaw?normalizeEgyptPhone(phoneRaw):'';
+  if(phoneRaw&&!validEgyptMobile(phone)){toast(currentLang==='ar'?'رقم الموبايل غير صحيح':'Invalid mobile number');return}
+  const method=f3.value||'cash';
+  const cartSnapshot=customerCart.map(c=>{
+    const p=S.products[c.i];
+    return {
+      product_id:p.dbId||null,
+      sku:p.sku,
+      qty:c.q,
+      name:p.name,
+      unitPrice:Number(p.price||0),
+      lineTotal:Number(p.price||0)*c.q
+    };
+  });
+  const rpcItems=cartSnapshot.map(x=>({product_id:x.product_id,sku:x.sku,qty:x.qty}));
+  const {data,error}=await spidDb.rpc('place_customer_order',{
+    p_customer_name:name,
+    p_customer_phone:phone||null,
+    p_items:rpcItems,
+    p_payment_method:method,
+    p_notes:session?.guest?'Guest checkout':'Authenticated customer'
+  });
+  if(error){console.error(error);toast((currentLang==='ar'?'تعذر إنشاء الطلب: ':'Could not place order: ')+error.message);return}
+  const total=Number(data.total||0),orderNo=data.order_no;
+  const subtotal=Number(data.subtotal||cartSnapshot.reduce((a,x)=>a+x.lineTotal,0));
+  const vat=Number(data.vat||Math.round(subtotal*.14*100)/100);
+  customerCart.forEach(x=>{S.products[x.i].stock=Math.max(0,S.products[x.i].stock-x.q)});
+  S.orders.unshift({
+    id:orderNo,
+    dbId:data.order_id,
+    channel:'Customer QR',
+    customer:name,
+    phone,
+    email:session?.email||'',
+    items:cartSnapshot,
+    subtotal,
+    vat,
+    total,
+    paymentMethod:method,
+    paymentStatus:data.payment_status||'pending',
+    notes:session?.guest?'Guest checkout':'Authenticated customer',
+    status:data.status||'Preparing',
+    time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+    dateTime:new Date().toLocaleString()
+  });
+  S.audit.unshift({time:new Date().toLocaleString('en-GB'),user:name,role:'Customer',module:'Orders',action:'Placed '+orderNo});
+  customerCart=[];save();updateCustomerBar();closeModal();
+  openModal('Order Placed','<div style="text-align:center;padding:10px"><div style="font-size:42px">✓</div><h3>'+esc(orderNo)+'</h3><p>Your order is now <b>Preparing</b>.</p><p class="muted">The full order details are synced live and visible to the cashier on every device.</p></div>','info')
+}
 
 function openModal(title,body,mode){modalMode=mode;modalRoot.innerHTML='<div class="modalback" onclick="if(event.target===this)closeModal()"><div class="modal"><h3>'+title+'</h3>'+body+'<div class="modalfoot">'+(mode==='info'?'<button class="btn primary" onclick="closeModal()">Done</button>':'<button class="btn" onclick="closeModal()">Cancel</button><button class="btn primary" onclick="submitModal()">Save / Confirm</button>')+'</div></div></div>'}
 function closeModal(){stopQRScanner();modalRoot.innerHTML=''}
@@ -494,7 +591,7 @@ const AR={
 'Invoice':'فاتورة','Cashier':'الكاشير','Mobile':'الموبايل','Tax ID':'الرقم الضريبي','Payment':'طريقة الدفع','Item':'الصنف','Qty':'الكمية','Thank you for shopping with us.':'شكرًا لزيارتكم.','Invoice History':'سجل الفواتير','Recent cashier receipts':'أحدث فواتير الكاشير','View / Reprint':'عرض / إعادة طباعة',
 'Product QR Scanner':'ماسح QR للمنتجات','Point the camera at a SPID product QR code.':'وجّه الكاميرا إلى QR الخاص بالمنتج.','Starting camera…':'جاري تشغيل الكاميرا…','Manual QR fallback':'إدخال QR يدويًا','Barcode Scan':'مسح الباركود','Expense':'المصروف','Amount':'المبلغ','Actual Cash':'النقدية الفعلية','Done':'تم','Save / Confirm':'حفظ / تأكيد','Confirm deletion':'تأكيد الحذف',
 'Cappuccino':'كابتشينو','Turkey Sandwich':'ساندوتش تركي','Mineral Water':'مياه معدنية','Orange Juice':'عصير برتقال','Potato Chips':'شيبسي','Dark Chocolate':'شوكولاتة دارك','Fresh Milk':'لبن طازج','Butter Croissant':'كرواسون بالزبدة','Coffee':'قهوة','Fresh Food':'أطعمة طازجة','Drinks':'مشروبات','Snacks':'سناكس','Dairy':'ألبان','Bakery':'مخبوزات',
-'On shift':'في الشيفت','Break':'استراحة','Off':'إجازة','Scheduled':'مجدول','Barista':'باريستا','Storekeeper':'أمين مخزن','Supervisor':'مشرف','Delivery':'توصيل','Active':'نشط','Inactive':'غير نشط','Customer Login':'دخول العميل','Customer Email Login':'دخول العميل بالبريد الإلكتروني','Enter your email and we’ll send you a one-time verification code. No password needed.':'اكتب بريدك الإلكتروني وسنرسل لك كود تحقق من 6 أرقام بدون كلمة مرور.','Email Address':'البريد الإلكتروني','Send Email OTP':'إرسال كود على الإيميل','Change Email':'تغيير البريد الإلكتروني','Guest checkout is still available without creating an account.':'لا يزال بإمكانك الطلب كضيف بدون إنشاء حساب.','Enter your email and we’ll send you a one-time verification code. No password needed.':'استخدم رقم الموبايل فقط. لا تحتاج بريد إلكتروني.','Your name':'اسمك','OTP Channel':'طريقة إرسال الكود','Send OTP':'إرسال الكود','Continue as Guest':'المتابعة كضيف','OTP Code':'كود التحقق','Verify & Continue':'تأكيد ومتابعة','Change Number':'تغيير الرقم','Guest checkout is available without creating an account.':'يمكنك الطلب كضيف بدون إنشاء حساب.','Guest':'ضيف','Customer & Order Details':'بيانات العميل والطلب','Cash at counter':'الدفع نقدًا عند الكاشير','Online Payment (coming next)':'دفع أونلاين (سيتم ربطه لاحقًا)','Guest checkout is allowed. Your order will appear live for the cashier.':'يمكن الطلب كضيف، وسيظهر الطلب مباشرة عند الكاشير.','The order is saved in the live database and is visible to the cashier.':'تم حفظ الطلب في قاعدة البيانات وسيظهر مباشرة عند الكاشير.'
+'On shift':'في الشيفت','Break':'استراحة','Off':'إجازة','Scheduled':'مجدول','Barista':'باريستا','Storekeeper':'أمين مخزن','Supervisor':'مشرف','Delivery':'توصيل','Active':'نشط','Inactive':'غير نشط','Customer Login':'دخول العميل','Customer Email Login':'دخول العميل بالبريد الإلكتروني','Enter your email and we’ll send you a one-time verification code. No password needed.':'اكتب بريدك الإلكتروني وسنرسل لك كود تحقق من 6 أرقام بدون كلمة مرور.','Email Address':'البريد الإلكتروني','Send Email OTP':'إرسال كود على الإيميل','Change Email':'تغيير البريد الإلكتروني','Guest checkout is still available without creating an account.':'لا يزال بإمكانك الطلب كضيف بدون إنشاء حساب.','Enter your email and we’ll send you a one-time verification code. No password needed.':'استخدم رقم الموبايل فقط. لا تحتاج بريد إلكتروني.','Your name':'اسمك','OTP Channel':'طريقة إرسال الكود','Send OTP':'إرسال الكود','Continue as Guest':'المتابعة كضيف','OTP Code':'كود التحقق','Verify & Continue':'تأكيد ومتابعة','Change Number':'تغيير الرقم','Guest checkout is available without creating an account.':'يمكنك الطلب كضيف بدون إنشاء حساب.','Guest':'ضيف','Customer & Order Details':'بيانات العميل والطلب','Cash at counter':'الدفع نقدًا عند الكاشير','Online Payment (coming next)':'دفع أونلاين (سيتم ربطه لاحقًا)','Guest checkout is allowed. Your order will appear live for the cashier.':'يمكن الطلب كضيف، وسيظهر الطلب مباشرة عند الكاشير.','The order is saved in the live database and is visible to the cashier.':'تم حفظ الطلب في قاعدة البيانات وسيظهر مباشرة عند الكاشير.','View details':'عرض التفاصيل','Order Information':'بيانات الطلب','Date / Time':'التاريخ / الوقت','Payment Status':'حالة الدفع','Order Items':'تفاصيل الطلب','Unit':'سعر الوحدة','Items unavailable':'تفاصيل المنتجات غير متاحة','The full order details are synced live and visible to the cashier on every device.':'تمت مزامنة تفاصيل الطلب بالكامل وستظهر للكاشير مباشرة على أي جهاز.'
 };
 const AR_KEYS=Object.keys(AR).sort((a,b)=>b.length-a.length);
 const originalText=new WeakMap();
