@@ -121,7 +121,7 @@ audit:[{time:'Today 11:58',user:'Ramy Owner',role:'Owner',module:'Inventory',act
 };
 let S=JSON.parse(localStorage.getItem('spidERPv2')||'null')||structuredClone(seed);
 let session=JSON.parse(localStorage.getItem('spidSession')||'null');
-let selectedRole='owner',cart=[],customerCart=[],currentCount=null,modalMode='',modalIndex=-1;
+let selectedRole='owner',cart=[],customerCart=[],currentCount=null,modalMode='',modalIndex=-1,reportPeriod='daily';
 const roleInfo={
 customer:{label:'Customer',icon:'🛍️',desc:'Browse products, place QR orders and track your order.',user:'customer@spid.demo',pass:'demo123',name:'Demo Customer'},
 cashier:{label:'Cashier',icon:'🧾',desc:'POS, checkout, current orders and own cash shift.',user:'cashier@spid.demo',pass:'demo123',name:'Mariam Cashier'},
@@ -204,7 +204,69 @@ function page_suppliers(){return '<div class="toolbar"><div><b>Suppliers & Purch
 function supplierForm(){openModal('Add Supplier','<div class="field"><label>Supplier Name</label><input id="f1" class="input"></div><div class="field"><label>Category</label><input id="f2" class="input" value="General"></div><div class="field"><label>Opening Balance</label><input id="f3" type="number" class="input" value="0"></div>','supplier')}
 function saveSupplier(){S.suppliers.push({name:f1.value||'New Supplier',category:f2.value||'General',balance:+f3.value||0,status:'Active'});audit('Created supplier '+f1.value,'Suppliers');save();closeModal();go('suppliers')}
 
-function page_reports(){return '<div class="grid four"><div class="card kpi"><span class="muted">Average Basket</span><b>'+money(186)+'</b></div><div class="card kpi"><span class="muted">Peak Hour</span><b>18:00</b></div><div class="card kpi"><span class="muted">Avg Prep Time</span><b>4m 12s</b></div><div class="card kpi"><span class="muted">QR Adoption</span><b>28%</b></div></div><div class="card" style="margin-top:14px"><b>Weekly Sales Trend</b><div style="height:230px;display:flex;gap:12px;align-items:end;margin-top:18px">'+[55,68,62,82,76,95,88].map((v,i)=>'<div style="flex:1;height:'+v+'%;background:linear-gradient(#00aeef,#0a4e68);border-radius:8px 8px 0 0;text-align:center"><small>'+['M','T','W','T','F','S','S'][i]+'</small></div>').join('')+'</div></div>'}
+function reportDataset(period){
+  const baseSales=18560+S.orders.reduce((a,o)=>a+o.total,0);
+  const mult=period==='daily'?1:period==='weekly'?6.7:28.8;
+  const sales=Math.round(baseSales*mult);
+  const orders=Math.round((S.orders.length+73)*mult);
+  const expenses=Math.round(S.expenses.reduce((a,e)=>a+e.amount,0)*mult);
+  const cogs=Math.round(sales*.43);
+  const gross=sales-cogs;
+  const net=gross-expenses;
+  const avg=Math.round(sales/Math.max(orders,1));
+  const qrShare=period==='daily'?28:period==='weekly'?31:34;
+  const cash=Math.round(sales*.37),card=Math.round(sales*.44),wallet=sales-cash-card;
+  const labels=period==='daily'?['08','10','12','14','16','18','20','22']:period==='weekly'?['Mon','Tue','Wed','Thu','Fri','Sat','Sun']:['W1','W2','W3','W4'];
+  const trend=period==='daily'?[34,48,63,56,72,96,78,51]:period==='weekly'?[55,68,62,82,76,95,88]:[66,74,83,92];
+  return {period,sales,orders,expenses,cogs,gross,net,avg,qrShare,cash,card,wallet,labels,trend};
+}
+function setReportPeriod(p){reportPeriod=p;go('reports')}
+function reportTitle(){return reportPeriod==='daily'?'Daily Report':reportPeriod==='weekly'?'Weekly Report':'Monthly Report'}
+function page_reports(){
+  const d=reportDataset(reportPeriod);
+  const top=S.products.slice().sort((a,b)=>(b.price*b.stock)-(a.price*a.stock)).slice(0,5);
+  return '<div class="toolbar"><div><b>'+reportTitle()+'</b><div class="muted">Sales, profitability, payments, products and operations for the selected period.</div></div><div class="actions"><button class="btn '+(reportPeriod==='daily'?'blue':'')+'" onclick="setReportPeriod(\'daily\')">Daily</button><button class="btn '+(reportPeriod==='weekly'?'blue':'')+'" onclick="setReportPeriod(\'weekly\')">Weekly</button><button class="btn '+(reportPeriod==='monthly'?'blue':'')+'" onclick="setReportPeriod(\'monthly\')">Monthly</button><button class="btn" onclick="exportReportCSV()">Export CSV</button><button class="btn primary" onclick="printReport()">Print / Save PDF</button></div></div>'+
+  '<div class="grid four"><div class="card kpi"><span class="muted">Net Sales</span><b>'+money(d.sales)+'</b><span class="green">'+d.orders+' orders</span></div><div class="card kpi"><span class="muted">Gross Profit</span><b>'+money(d.gross)+'</b><span>'+Math.round(d.gross/d.sales*100)+'% margin</span></div><div class="card kpi"><span class="muted">Net Profit</span><b>'+money(d.net)+'</b><span>After expenses</span></div><div class="card kpi"><span class="muted">Avg Basket</span><b>'+money(d.avg)+'</b><span>'+d.qrShare+'% QR / Customer</span></div></div>'+
+  '<div class="grid two" style="margin-top:14px"><div class="card"><div class="toolbar"><b>Sales Trend</b><span class="pill">'+reportTitle()+'</span></div><div style="height:230px;display:flex;gap:10px;align-items:end;margin-top:18px">'+d.trend.map((v,i)=>'<div style="flex:1;height:'+v+'%;background:linear-gradient(#00aeef,#0a4e68);border-radius:8px 8px 0 0;text-align:center;min-width:28px"><small>'+d.labels[i]+'</small></div>').join('')+'</div></div>'+
+  '<div class="card"><b>Financial Summary</b><div class="line"><span>Sales</span><b>'+money(d.sales)+'</b></div><div class="line"><span>COGS</span><b>'+money(d.cogs)+'</b></div><div class="line"><span>Gross Profit</span><b>'+money(d.gross)+'</b></div><div class="line"><span>Expenses</span><b>'+money(d.expenses)+'</b></div><div class="line"><span>Net Profit</span><b class="green">'+money(d.net)+'</b></div></div></div>'+
+  '<div class="grid two" style="margin-top:14px"><div class="card"><b>Payment Mix</b><div class="line"><span>Cash</span><b>'+money(d.cash)+'</b></div><div class="line"><span>Card</span><b>'+money(d.card)+'</b></div><div class="line"><span>Wallet / QR</span><b>'+money(d.wallet)+'</b></div><div class="line"><span>QR Adoption</span><b>'+d.qrShare+'%</b></div></div>'+
+  '<div class="card"><b>Top Products</b>'+top.map((p,i)=>'<div class="line"><span>'+(i+1)+'. '+esc(p.name)+'</span><div><b>'+money(p.price)+'</b><div class="muted" style="font-size:11px">'+p.stock+' in stock</div></div></div>').join('')+'</div></div>'+
+  '<div class="card" style="margin-top:14px"><div class="toolbar"><b>Operational Summary</b><span class="muted">Export-ready management view</span></div><div class="tablewrap"><table class="table"><tr><th>Metric</th><th>Value</th><th>Notes</th></tr><tr><td>Total Orders</td><td><b>'+d.orders+'</b></td><td>POS + Customer QR</td></tr><tr><td>Average Basket</td><td><b>'+money(d.avg)+'</b></td><td>Per completed order</td></tr><tr><td>Peak Hour</td><td><b>18:00</b></td><td>Highest transaction volume</td></tr><tr><td>Avg Prep Time</td><td><b>4m 12s</b></td><td>Customer / QR orders</td></tr><tr><td>Low Stock SKUs</td><td><b>'+S.products.filter(p=>p.stock<=p.reorder).length+'</b></td><td>At or below reorder level</td></tr><tr><td>Staff On Shift</td><td><b>'+S.staff.filter(s=>s.status==='On shift').length+'</b></td><td>Current live staffing</td></tr></table></div></div>';
+}
+function reportRows(){
+  const d=reportDataset(reportPeriod);
+  return [
+    ['Report',reportTitle()],
+    ['Period',reportPeriod],
+    ['Net Sales',d.sales],
+    ['Orders',d.orders],
+    ['Average Basket',d.avg],
+    ['COGS',d.cogs],
+    ['Gross Profit',d.gross],
+    ['Expenses',d.expenses],
+    ['Net Profit',d.net],
+    ['Cash Payments',d.cash],
+    ['Card Payments',d.card],
+    ['Wallet / QR Payments',d.wallet],
+    ['QR Adoption',d.qrShare+'%'],
+    ['Low Stock SKUs',S.products.filter(p=>p.stock<=p.reorder).length],
+    ['Staff On Shift',S.staff.filter(s=>s.status==='On shift').length]
+  ];
+}
+function exportReportCSV(){
+  const rows=[['SPID Mini Market ERP',reportTitle()],['Cairo Demo Branch','EGP · VAT 14%'],[],['Metric','Value'],...reportRows(),[],['Top Products','Price','Stock'],...S.products.slice().sort((a,b)=>(b.price*b.stock)-(a.price*a.stock)).slice(0,5).map(p=>[p.name,p.price,p.stock])];
+  const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='SPID-Mini-Market-'+reportPeriod+'-report.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+  audit('Exported '+reportTitle()+' as CSV','Reports');toast(reportTitle()+' exported as CSV');
+}
+function printReport(){
+  const d=reportDataset(reportPeriod),rows=reportRows();
+  const w=window.open('','_blank','width=900,height=700');
+  if(!w){toast('Allow pop-ups to print the report');return}
+  w.document.write('<!doctype html><html><head><title>'+reportTitle()+'</title><style>body{font-family:Arial,sans-serif;padding:32px;color:#111}h1{margin-bottom:4px}.muted{color:#666}table{width:100%;border-collapse:collapse;margin-top:24px}th,td{border:1px solid #ddd;padding:10px;text-align:left}th{background:#f3f4f6}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:24px 0}.kpi{border:1px solid #ddd;padding:14px;border-radius:10px}.kpi b{display:block;font-size:20px;margin-top:5px}@media print{button{display:none}}</style></head><body><h1>SPID Mini Market ERP</h1><div class="muted">Cairo Demo Branch · '+reportTitle()+' · EGP · VAT 14%</div><div class="kpis"><div class="kpi">Net Sales<b>'+money(d.sales)+'</b></div><div class="kpi">Orders<b>'+d.orders+'</b></div><div class="kpi">Net Profit<b>'+money(d.net)+'</b></div><div class="kpi">Avg Basket<b>'+money(d.avg)+'</b></div></div><table><tr><th>Metric</th><th>Value</th></tr>'+rows.map(r=>'<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>').join('')+'</table><h3>Top Products</h3><table><tr><th>Product</th><th>Price</th><th>Stock</th></tr>'+S.products.slice().sort((a,b)=>(b.price*b.stock)-(a.price*a.stock)).slice(0,5).map(p=>'<tr><td>'+p.name+'</td><td>'+money(p.price)+'</td><td>'+p.stock+'</td></tr>').join('')+'</table><p class="muted">Generated by SPID Systems — Speed. Security. Systems.</p><script>window.onload=()=>setTimeout(()=>window.print(),250)<\/script></body></html>');
+  w.document.close();audit('Opened '+reportTitle()+' for Print/PDF','Reports');
+}
 function page_users(){return '<div class="toolbar"><div><b>Users & Roles</b><div class="muted">Only Owner / Super Admin can manage access.</div></div><button class="btn primary" onclick="userForm()">+ Add User</button></div><div class="card"><div class="tablewrap"><table class="table"><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr>'+S.users.map((u,i)=>'<tr><td><b>'+esc(u.name)+'</b></td><td>'+esc(u.email)+'</td><td>'+esc(u.role)+'</td><td><span class="status">'+(u.active?'Active':'Inactive')+'</span></td><td><div class="actions"><button class="btn" onclick="S.users['+i+'].active=!S.users['+i+'].active;save();go(\'users\')">Toggle</button><button class="btn danger" onclick="askDelete(\'user\','+i+',\''+esc(u.name).replace(/'/g,"&#39;")+'\')">Delete</button></div></td></tr>').join('')+'</table></div></div><div class="card" style="margin-top:14px"><b>Permission Matrix</b><div class="tablewrap"><table class="table"><tr><th>Role</th><th>POS</th><th>Inventory</th><th>HR</th><th>Accounting</th><th>Users</th><th>Approve</th></tr><tr><td><b>Owner / Super Admin</b></td><td>Full</td><td>Full</td><td>Full</td><td>Full</td><td>Full</td><td>Yes</td></tr><tr><td>Cashier</td><td>Operational</td><td>Lookup only</td><td class="red">No</td><td>Own drawer only</td><td class="red">No</td><td class="red">No</td></tr><tr><td>HR</td><td class="red">No</td><td class="red">No</td><td>Full</td><td>Payroll only</td><td class="red">No</td><td>HR only</td></tr><tr><td>Customer</td><td class="red">No</td><td class="red">No</td><td class="red">No</td><td class="red">No</td><td class="red">No</td><td class="red">No</td></tr></table></div></div>'}
 function userForm(){openModal('Add System User','<div class="field"><label>Name</label><input id="f1" class="input"></div><div class="field"><label>Email</label><input id="f2" class="input"></div><div class="field"><label>Role</label><select id="f3" class="input"><option>Manager</option><option>Cashier</option><option>HR</option><option>Inventory</option></select></div>','user')}
 function saveUser(){S.users.push({name:f1.value||'New User',email:f2.value||'user@spid.demo',role:f3.value,active:true});audit('Created user '+f1.value+' with role '+f3.value,'Users & Roles');save();closeModal();go('users')}
