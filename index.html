@@ -649,35 +649,94 @@ function setReadyNotifiedIds(ids){
 }
 function updateNotifyButton(){
   const b=document.getElementById('customerNotifyBtn');if(!b)return;
-  if(!('Notification' in window)){b.textContent='🔔 In-app alerts on';b.disabled=true;return}
-  if(Notification.permission==='granted'){b.textContent='🔔 Notifications On';b.disabled=true}
-  else if(Notification.permission==='denied'){b.textContent='🔕 Notifications Blocked';b.disabled=true}
-  else{b.textContent='🔔 Enable Notifications';b.disabled=false}
+  if(!window.isSecureContext){
+    b.textContent='🔕 HTTPS Required';b.disabled=false;return;
+  }
+  if(!('Notification' in window)){
+    b.textContent='🔔 In-app Alerts';b.disabled=false;return;
+  }
+  if(Notification.permission==='granted'){
+    b.textContent='🔔 Test Notification';b.disabled=false;
+  }else if(Notification.permission==='denied'){
+    b.textContent='🔕 Notifications Blocked';b.disabled=false;
+  }else{
+    b.textContent='🔔 Enable Notifications';b.disabled=false;
+  }
+}
+async function getSpidNotificationRegistration(){
+  if(!('serviceWorker' in navigator))return null;
+  try{
+    const existing=await navigator.serviceWorker.getRegistration('/');
+    if(existing)return existing;
+    return await navigator.serviceWorker.register('/sw.js',{scope:'/'});
+  }catch(e){
+    console.error('Service worker registration failed',e);
+    return null;
+  }
+}
+async function showSystemNotification(title,body,tag='spid-alert',orderId=''){
+  if(!('Notification' in window)||Notification.permission!=='granted')return false;
+  try{
+    const reg=await getSpidNotificationRegistration();
+    if(reg){
+      await reg.showNotification(title,{
+        body,
+        tag,
+        renotify:false,
+        data:{url:location.href,orderId}
+      });
+      return true;
+    }
+    if(typeof Notification==='function'){
+      const n=new Notification(title,{body,tag});
+      n.onclick=()=>window.focus();
+      return true;
+    }
+  }catch(e){console.error('System notification failed',e)}
+  return false;
 }
 async function requestCustomerNotifications(){
-  if(!('Notification' in window)){toast(currentLang==='ar'?'المتصفح لا يدعم إشعارات النظام، وسيظهر تنبيه داخل الموقع.':'This browser does not support system notifications. In-app alerts will still work.');updateNotifyButton();return}
+  if(!window.isSecureContext){
+    toast(currentLang==='ar'?'الإشعارات تحتاج فتح الموقع عبر HTTPS.':'Notifications require HTTPS.');
+    updateNotifyButton();return;
+  }
+  if(!('Notification' in window)){
+    const isiOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+    toast(isiOS?(currentLang==='ar'?'على iPhone أضف الموقع إلى الشاشة الرئيسية أولًا ثم افتحه من الأيقونة لتفعيل الإشعارات.':'On iPhone, add the site to your Home Screen first, then open it from the icon to enable notifications.'):(currentLang==='ar'?'المتصفح لا يدعم إشعارات النظام، وسيظل التنبيه داخل الموقع يعمل.':'This browser does not support system notifications. In-app alerts will still work.'));
+    updateNotifyButton();return;
+  }
   try{
-    const permission=await Notification.requestPermission();
-    updateNotifyButton();
-    if(permission==='granted'){
-      toast(currentLang==='ar'?'تم تفعيل الإشعارات':'Notifications enabled');
-      new Notification('SPID Cafe ERP',{body:currentLang==='ar'?'سيصلك تنبيه عندما يكون طلبك جاهزًا.':'You will be notified when your order is ready.'});
-    }else if(permission==='denied'){
-      toast(currentLang==='ar'?'تم حظر الإشعارات من المتصفح':'Notifications are blocked in your browser');
+    if(Notification.permission==='denied'){
+      toast(currentLang==='ar'?'الإشعارات محظورة. فعّلها من إعدادات الموقع في المتصفح ثم جرّب مرة أخرى.':'Notifications are blocked. Enable them in the browser site settings, then try again.');
+      updateNotifyButton();return;
     }
-  }catch(e){console.error('Notification permission',e)}
+    if(Notification.permission!=='granted'){
+      const permission=await Notification.requestPermission();
+      if(permission!=='granted'){
+        updateNotifyButton();
+        toast(currentLang==='ar'?'لم يتم السماح بالإشعارات.':'Notification permission was not granted.');
+        return;
+      }
+    }
+    await getSpidNotificationRegistration();
+    updateNotifyButton();
+    const ok=await showSystemNotification(
+      'SPID Cafe ERP',
+      currentLang==='ar'?'تم تفعيل الإشعارات. سيصلك تنبيه عندما يكون طلبك جاهزًا.':'Notifications are enabled. You will be notified when your order is ready.',
+      'spid-test'
+    );
+    toast(ok?(currentLang==='ar'?'تم تفعيل الإشعارات بنجاح':'Notifications enabled successfully'):(currentLang==='ar'?'تم منح الإذن لكن تعذر عرض إشعار الاختبار.':'Permission granted, but the test notification could not be displayed.'));
+  }catch(e){
+    console.error('Notification permission',e);
+    toast(currentLang==='ar'?'حدث خطأ أثناء تفعيل الإشعارات.':'Could not enable notifications.');
+  }
 }
-function notifyOrderReady(o){
+async function notifyOrderReady(o){
   if(!o)return;
   const title=currentLang==='ar'?'طلبك جاهز 🎉':'Your order is ready 🎉';
   const body=currentLang==='ar'?('الطلب '+o.id+' جاهز للاستلام الآن.'):('Order '+o.id+' is ready for pickup now.');
   toast(body);
-  if('Notification' in window && Notification.permission==='granted'){
-    try{
-      const n=new Notification(title,{body,tag:'spid-ready-'+o.id,renotify:false});
-      n.onclick=()=>{window.focus();try{showCustomerOrderDetailsById(o.id)}catch(e){}};
-    }catch(e){console.error('Ready notification',e)}
-  }
+  await showSystemNotification(title,body,'spid-ready-'+o.id,o.id);
 }
 function checkCustomerReadyNotifications(){
   if(!session||session.role!=='customer')return;
@@ -870,7 +929,7 @@ const AR={
 'Invoice':'فاتورة','Cashier':'الكاشير','Mobile':'الموبايل','Tax ID':'الرقم الضريبي','Payment':'طريقة الدفع','Item':'الصنف','Qty':'الكمية','Thank you for shopping with us.':'شكرًا لزيارتكم.','Invoice History':'سجل الفواتير','Recent cashier receipts':'أحدث فواتير الكاشير','View / Reprint':'عرض / إعادة طباعة',
 'Product QR Scanner':'ماسح QR للمنتجات','Point the camera at a SPID product QR code.':'وجّه الكاميرا إلى QR الخاص بالمنتج.','Starting camera…':'جاري تشغيل الكاميرا…','Manual QR fallback':'إدخال QR يدويًا','Barcode Scan':'مسح الباركود','Expense':'المصروف','Amount':'المبلغ','Actual Cash':'النقدية الفعلية','Done':'تم','Save / Confirm':'حفظ / تأكيد','Confirm deletion':'تأكيد الحذف',
 'Cappuccino':'كابتشينو','Turkey Sandwich':'ساندوتش تركي','Mineral Water':'مياه معدنية','Orange Juice':'عصير برتقال','Potato Chips':'شيبسي','Dark Chocolate':'شوكولاتة دارك','Fresh Milk':'لبن طازج','Butter Croissant':'كرواسون بالزبدة','Coffee':'قهوة','Fresh Food':'أطعمة طازجة','Drinks':'مشروبات','Snacks':'سناكس','Dairy':'ألبان','Bakery':'مخبوزات',
-'On shift':'في الشيفت','Break':'استراحة','Off':'إجازة','Scheduled':'مجدول','Barista':'باريستا','Storekeeper':'أمين مخزن','Supervisor':'مشرف','Delivery':'توصيل','Active':'نشط','Inactive':'غير نشط','Customer Login':'دخول العميل','Customer Email Login':'دخول العميل بالبريد الإلكتروني','Enter your email and we’ll send you a one-time verification code. No password needed.':'اكتب بريدك الإلكتروني وسنرسل لك كود تحقق من 6 أرقام بدون كلمة مرور.','Email Address':'البريد الإلكتروني','Send Email OTP':'إرسال كود على الإيميل','Change Email':'تغيير البريد الإلكتروني','Guest checkout is still available without creating an account.':'لا يزال بإمكانك الطلب كضيف بدون إنشاء حساب.','Enter your email and we’ll send you a one-time verification code. No password needed.':'استخدم رقم الموبايل فقط. لا تحتاج بريد إلكتروني.','Your name':'اسمك','OTP Channel':'طريقة إرسال الكود','Send OTP':'إرسال الكود','Continue as Guest':'المتابعة كضيف','OTP Code':'كود التحقق','Verify & Continue':'تأكيد ومتابعة','Change Number':'تغيير الرقم','Guest checkout is available without creating an account.':'يمكنك الطلب كضيف بدون إنشاء حساب.','Guest':'ضيف','Customer & Order Details':'بيانات العميل والطلب','Cash at counter':'الدفع نقدًا عند الكاشير','Online Payment (coming next)':'دفع أونلاين (سيتم ربطه لاحقًا)','Guest checkout is allowed. Your order will appear live for the cashier.':'يمكن الطلب كضيف، وسيظهر الطلب مباشرة عند الكاشير.','The order is saved in the live database and is visible to the cashier.':'تم حفظ الطلب في قاعدة البيانات وسيظهر مباشرة عند الكاشير.','View details':'عرض التفاصيل','My Orders':'طلباتي','Enable Notifications':'تفعيل الإشعارات','Notifications On':'الإشعارات مفعّلة','Notifications Blocked':'الإشعارات محظورة','Your order is ready 🎉':'طلبك جاهز 🎉','You will be notified when your order is ready.':'سيصلك تنبيه عندما يكون طلبك جاهزًا.','Track your order status live.':'تابع حالة طلبك مباشرة.','Order number':'رقم الطلب','Track Order':'تتبع الطلب','No orders to track yet. Place an order and it will appear here automatically.':'لا توجد طلبات للمتابعة بعد. اعمل طلب وسيظهر هنا تلقائيًا.','Waiting for sync':'في انتظار المزامنة','View Order':'عرض الطلب','We are preparing your order.':'نقوم الآن بتحضير طلبك.','Your order is ready for pickup.':'طلبك جاهز للاستلام.','Your order has been completed.':'تم إكمال طلبك.','This order was cancelled.':'تم إلغاء هذا الطلب.','Track':'تتبع','Delete Order':'حذف الطلب','Edit Order':'تعديل الطلب','Print Invoice':'طباعة الفاتورة','Save Changes':'حفظ التعديلات','Add Item':'إضافة منتج','Remove':'حذف','Payment Method':'طريقة الدفع','Delete Order':'حذف الطلب','Order Information':'بيانات الطلب','Date / Time':'التاريخ / الوقت','Payment Status':'حالة الدفع','Order Items':'تفاصيل الطلب','Unit':'سعر الوحدة','Items unavailable':'تفاصيل المنتجات غير متاحة','The full order details are synced live and visible to the cashier on every device.':'تمت مزامنة تفاصيل الطلب بالكامل وستظهر للكاشير مباشرة على أي جهاز.'
+'On shift':'في الشيفت','Break':'استراحة','Off':'إجازة','Scheduled':'مجدول','Barista':'باريستا','Storekeeper':'أمين مخزن','Supervisor':'مشرف','Delivery':'توصيل','Active':'نشط','Inactive':'غير نشط','Customer Login':'دخول العميل','Customer Email Login':'دخول العميل بالبريد الإلكتروني','Enter your email and we’ll send you a one-time verification code. No password needed.':'اكتب بريدك الإلكتروني وسنرسل لك كود تحقق من 6 أرقام بدون كلمة مرور.','Email Address':'البريد الإلكتروني','Send Email OTP':'إرسال كود على الإيميل','Change Email':'تغيير البريد الإلكتروني','Guest checkout is still available without creating an account.':'لا يزال بإمكانك الطلب كضيف بدون إنشاء حساب.','Enter your email and we’ll send you a one-time verification code. No password needed.':'استخدم رقم الموبايل فقط. لا تحتاج بريد إلكتروني.','Your name':'اسمك','OTP Channel':'طريقة إرسال الكود','Send OTP':'إرسال الكود','Continue as Guest':'المتابعة كضيف','OTP Code':'كود التحقق','Verify & Continue':'تأكيد ومتابعة','Change Number':'تغيير الرقم','Guest checkout is available without creating an account.':'يمكنك الطلب كضيف بدون إنشاء حساب.','Guest':'ضيف','Customer & Order Details':'بيانات العميل والطلب','Cash at counter':'الدفع نقدًا عند الكاشير','Online Payment (coming next)':'دفع أونلاين (سيتم ربطه لاحقًا)','Guest checkout is allowed. Your order will appear live for the cashier.':'يمكن الطلب كضيف، وسيظهر الطلب مباشرة عند الكاشير.','The order is saved in the live database and is visible to the cashier.':'تم حفظ الطلب في قاعدة البيانات وسيظهر مباشرة عند الكاشير.','View details':'عرض التفاصيل','My Orders':'طلباتي','Enable Notifications':'تفعيل الإشعارات','Test Notification':'اختبار الإشعار','Notifications are enabled. You will be notified when your order is ready.':'تم تفعيل الإشعارات. سيصلك تنبيه عندما يكون طلبك جاهزًا.','HTTPS Required':'مطلوب HTTPS','In-app Alerts':'تنبيهات داخل الموقع','Notifications On':'الإشعارات مفعّلة','Notifications Blocked':'الإشعارات محظورة','Your order is ready 🎉':'طلبك جاهز 🎉','You will be notified when your order is ready.':'سيصلك تنبيه عندما يكون طلبك جاهزًا.','Track your order status live.':'تابع حالة طلبك مباشرة.','Order number':'رقم الطلب','Track Order':'تتبع الطلب','No orders to track yet. Place an order and it will appear here automatically.':'لا توجد طلبات للمتابعة بعد. اعمل طلب وسيظهر هنا تلقائيًا.','Waiting for sync':'في انتظار المزامنة','View Order':'عرض الطلب','We are preparing your order.':'نقوم الآن بتحضير طلبك.','Your order is ready for pickup.':'طلبك جاهز للاستلام.','Your order has been completed.':'تم إكمال طلبك.','This order was cancelled.':'تم إلغاء هذا الطلب.','Track':'تتبع','Delete Order':'حذف الطلب','Edit Order':'تعديل الطلب','Print Invoice':'طباعة الفاتورة','Save Changes':'حفظ التعديلات','Add Item':'إضافة منتج','Remove':'حذف','Payment Method':'طريقة الدفع','Delete Order':'حذف الطلب','Order Information':'بيانات الطلب','Date / Time':'التاريخ / الوقت','Payment Status':'حالة الدفع','Order Items':'تفاصيل الطلب','Unit':'سعر الوحدة','Items unavailable':'تفاصيل المنتجات غير متاحة','The full order details are synced live and visible to the cashier on every device.':'تمت مزامنة تفاصيل الطلب بالكامل وستظهر للكاشير مباشرة على أي جهاز.'
 };
 const AR_KEYS=Object.keys(AR).sort((a,b)=>b.length-a.length);
 const originalText=new WeakMap();
@@ -936,6 +995,7 @@ async function restoreCustomerAuthSession(){
   }catch(e){console.error('Auth session restore',e)}
 }
 initRemoteState();
+if('serviceWorker' in navigator&&window.isSecureContext){navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(e=>console.error('SW register',e));}
 restoreCustomerAuthSession();
 setTimeout(()=>{applyLanguage(document);splash.classList.add('hidden');if(session){showWorkspace()}else{loginScreen.classList.remove('hidden');selectRole('owner')}setTimeout(()=>applyLanguage(document),20)},1900);
 </script>
